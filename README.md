@@ -8,14 +8,14 @@
 ### 🧪 Simulation
 - [x] Design simulation scenarios
 - [x] Implement simulation code in R
-- [ ] Analyze simulation results
+- [x] Analyze simulation results
 
 ### 📊 Application
-- [ ] Identify real-world dataset
-- [ ] Preprocess data in R
-- [ ] Fit model in Matlab
-- [ ] Perform diagnostics in R
-- [ ] Summarize findings
+- [x] Identify real-world dataset
+- [x] Preprocess data in R
+- [x] Fit model in Matlab
+- [x] Perform diagnostics in R
+- [x] Summarize findings
 
 ---
 
