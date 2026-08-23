@@ -46,7 +46,7 @@
     │
     ├── Fig7_1_cohort_bar.png         # Cohort composition: events vs censored patients
     │                                 # per study
-    ├── Rplot01_kepm.png              # Kaplan-Meier survival curves by cohort
+    ├── Fig7_2_kepm.png              # Kaplan-Meier survival curves by cohort
     ├── Fig7_3_forest.png             # Global vs study-specific log-hazard ratios
     │                                 # (forest plot)
     ├── Fig7_4_deviation_tile.png     # Study-specific deviations from global effects
