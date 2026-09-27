@@ -95,7 +95,7 @@ returned from the same run.
 │   ├── 00_setup.R                    scenarios, tuning constants, competitor wrappers
 │   ├── 01_run_simulation.R           Monte Carlo runner; resumable
 │   ├── 02_make_tables_figures.R      aggregates results WITHOUT refitting
-│   ├── run_all.sh                    driver (R = 25 replicates per scenario)
+│   ├── run_all.sh                    driver (R = 50 replicates per scenario)
 │   └── results/                      per-replicate CSVs, summaries, run log
 │
 ├── application/                    # Section 6
@@ -105,10 +105,9 @@ returned from the same run.
 │   ├── 03_make_tables_figures.R      tables and figures from stored results
 │   └── results/                      CSV/RDS outputs and logs
 │
-├── manuscript/
-│   ├── main.tex, references.bib
-│   ├── tables/                       .tex tables written by the scripts (\input)
-│   └── figures/                      .pdf figures written by the scripts
+├── output/                         # everything that goes into the paper
+│   ├── tables/                       LaTeX tables written by the scripts
+│   └── figures/                      PNG figures (300 dpi) written by the scripts
 │
 ├── scripts/
 │   ├── quick_test.R                  run this first (~1 min)
@@ -125,12 +124,15 @@ All paths are relative to the repository root.
 
 ## Which script produces which table
 
-Tables are written as LaTeX fragments and included with `\input`, so the numbers
-in the paper are the numbers the code computed; nothing is transcribed by hand.
+Every table is written as a LaTeX fragment to `output/tables/`, laid out exactly as
+in the manuscript, and every figure as a 300-dpi PNG to `output/figures/`. The
+manuscript itself is not part of this repository: copy `output/figures/` into the
+Overleaf project (the file names are the ones used by `\includegraphics`) and
+transfer the table values from `output/tables/`.
 
 | Table | Contents | Produced by | Output |
 |---|---|---|---|
-| 1 | Simulation scenarios | `simulation/02_make_tables_figures.R` | `manuscript/tables/tab_scenarios.tex` |
+| 1 | Simulation scenarios | `simulation/02_make_tables_figures.R` | `output/tables/tab_scenarios.tex` |
 | 2 | Base scenario, all methods, both rules | same | `tab_sim_base.tex` |
 | 3 | Coverage of post-selection Wald intervals | same | `tab_sim_coverage.tex` |
 | 4 | Cohort characteristics | `application/03_make_tables_figures.R` | `tab_cohorts.tex` |
@@ -150,19 +152,18 @@ Long-format results with Monte Carlo standard errors are in
 
 | Figure | Contents | Produced by | Output file |
 |---|---|---|---|
-| 1 | MCC by scenario, both rules | `simulation/02_make_tables_figures.R` | `manuscript/figures/sim_mcc.pdf` |
-| 2 | FDR and TPR by scenario | same | `sim_fdr_tpr.pdf` |
-| 3 | MSE of study-specific effects | same | `sim_mse_theta.pdf` |
-| 4 | Recovery of deviations | same | `sim_deviations.pdf` |
-| 5 | Kaplan–Meier curves by cohort | `application/03_make_tables_figures.R` | `app_km.pdf` |
-| 6 | Two-dimensional CV curve | same | `app_cv_surface.pdf` |
-| 7 | Global and study-specific hazard ratios | same | `app_forest.pdf` |
-| 8 | Bootstrap selection frequencies | same | `app_stability.pdf` |
+| 1 | MCC by scenario, both rules | `simulation/02_make_tables_figures.R` | `output/figures/sim_mcc.png` |
+| 2 | FDR and TPR by scenario | same | `sim_fdr_tpr.png` |
+| 3 | MSE of study-specific effects | same | `sim_mse_theta.png` |
+| 4 | Recovery of deviations | same | `sim_deviations.png` |
+| 5 | Kaplan–Meier curves by cohort | `application/03_make_tables_figures.R` | `app_km.png` |
+| 6 | Two-dimensional CV curve | same | `app_cv_surface.png` |
+| 7 | Global and study-specific hazard ratios | same | `app_forest.png` |
+| 8 | Bootstrap selection frequencies | same | `app_stability.png` |
 
-**These filenames are fixed by the `\includegraphics` calls in `main.tex` and must
-not be changed.** `manuscript/figures/` and `manuscript/tables/` are exactly the
-directories the `.tex` file reads, so rerunning the scripts updates the paper
-without path edits.
+**These filenames are fixed by the `\includegraphics{figures/...}` calls in
+`main.tex` and must not be changed.** Uploading `output/figures/` to the Overleaf
+project as `figures/` updates every figure without path edits.
 
 ---
 
@@ -235,14 +236,17 @@ through the same code paths as the full study.
 
 ```bash
 cd simulation
-./run_all.sh                         # 13 scenarios x 8 methods, R = 25 replicates
-Rscript 02_make_tables_figures.R     # Tables 1-3, A1 and Figures 1-4
+./run_all.sh                         # 13 scenarios x 8 methods, R = 50 replicates
+Rscript 02_make_tables_figures.R     # Tables 1-3, A1 and Figures 1-4 -> output/
 ```
 
-**About 1.3 hours on one core** (R = 25, the setting used in the paper). Each replicate is appended to
+**About 2.5 hours on one core for R = 50.** Each replicate is appended to
 `results/sim_raw_<scenario>.csv` as soon as it finishes, and the runner skips
 replicates already on disk, so the run is resumable: re-issue the same command
-after any interruption. Replicate `r` of scenario `s` uses
+after any interruption. The repository ships replicates 1-25 of every scenario;
+because every replicate has its own fixed seed, `./run_all.sh` only computes
+replicates 26-50. Delete `results/sim_raw_*.csv` and `results/sim_coverage_*.csv`
+to recompute everything from scratch in your own environment. Replicate `r` of scenario `s` uses
 `set.seed(20260000 + 1000 * s + r)`, so any single replicate can be regenerated
 in isolation. `02_make_tables_figures.R` refits nothing and reports the number of
 replicates per scenario it found.
@@ -253,7 +257,7 @@ replicates per scenario it found.
 cd application
 Rscript 01_prepare_data.R            # Table 4 data, p = 500 genes
 Rscript 02_fit_and_infer.R           # all fits, inference, validation (~15 min)
-Rscript 03_make_tables_figures.R     # Tables 4-8 and Figures 5-8
+Rscript 03_make_tables_figures.R     # Tables 4-8 and Figures 5-8 -> output/
 ```
 
 The small CSV outputs behind every application table are committed in
@@ -320,14 +324,19 @@ by cross-validation in our runs (`boundary` column of the simulation output).
 ## Audit
 
 ```bash
-Rscript scripts/audit_consistency.R
+Rscript scripts/audit_consistency.R                         # code side
+Rscript scripts/audit_consistency.R ~/overleaf/main.tex     # + your manuscript copy
 ```
 
-checks that every `\input` table and `\includegraphics` figure in `main.tex`
-exists and was produced by the scripts, that the tuning constants stated in the
-manuscript (folds, ratio grid, grid length, `kappa`, `d_max`, replicate count,
-dimensions) equal those in `simulation/00_setup.R`, and that every citation key
-resolves in `references.bib`.
+The code-side checks confirm that every table and figure exists in `output/`,
+that every scenario has exactly R = 50 replicates, that no fit violates the
+hierarchy, and that the tables are newer than the raw results. Given a path to
+`main.tex` (with `references.bib` next to it), it also checks that every
+`\includegraphics` file is produced in `output/figures/` and every produced figure
+is used, that the tuning constants and design stated in the manuscript (folds,
+ratio grid, grid length, `kappa`, `d_max`, `K`, `n_k`, `p`, `R`) equal those in
+`simulation/00_setup.R`, that every citation resolves, and that no `\TBD`
+placeholder remains.
 
 ---
 

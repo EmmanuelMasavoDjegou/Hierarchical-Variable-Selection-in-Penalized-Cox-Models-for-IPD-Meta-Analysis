@@ -3,19 +3,19 @@
 ##  Monte Carlo study of Section 5 (13 scenarios x 8 methods x R replicates).
 ##
 ##  Usage   : Rscript 01_run_simulation.R [R] [scenario numbers...]
-##            e.g.  Rscript 01_run_simulation.R 25           (all scenarios; paper)
-##                  Rscript 01_run_simulation.R 25 1 2 3     (subset)
+##            e.g.  Rscript 01_run_simulation.R 50           (all scenarios; paper)
+##                  Rscript 01_run_simulation.R 50 1 2 3     (subset)
 ##  Output  : results/sim_raw_<scenario>.csv      per-replicate metrics
 ##            results/sim_coverage_<scenario>.csv per-replicate Wald CI checks
 ##  Next    : 02_make_tables_figures.R builds Tables 1-3, A1 and Figures 1-4.
 ##  Seeds   : replicate r of scenario s uses set.seed(20260000 + 1000 * s + r).
-##  Runtime : about 1.3 h on one core for R = 25.
+##  Runtime : about 2.5 h on one core for R = 50 (replicates on disk are skipped).
 ################################################################################
 
 args <- commandArgs(trailingOnly = TRUE)
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
 source(file.path(here, "00_setup.R"))
-Rrep <- if (length(args) >= 1) as.integer(args[1]) else 100L
+Rrep <- if (length(args) >= 1) as.integer(args[1]) else 50L
 which_sc <- if (length(args) >= 2) as.integer(args[-1]) else seq_along(SCENARIOS)
 outdir <- file.path(here, "results"); dir.create(outdir, showWarnings = FALSE)
 slug <- function(x) gsub("[^A-Za-z0-9]+", "_", x)

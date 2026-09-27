@@ -3,23 +3,25 @@
 ##  Builds every table and figure of Section 6 from the stored outputs of
 ##  01_prepare_data.R and 02_fit_and_infer.R (nothing is refitted).
 ##
-##  Output (paths fixed by \input / \includegraphics in manuscript/main.tex):
-##    manuscript/tables/tab_cohorts.tex       Table 4
-##    manuscript/tables/tab_app_methods.tex   Table 5
-##    manuscript/tables/tab_app_genes.tex     Table 6
-##    manuscript/tables/tab_app_frailty.tex   Table 7
-##    manuscript/tables/tab_app_loso.tex      Table 8
-##    manuscript/figures/app_km.pdf           Figure 5
-##    manuscript/figures/app_cv_surface.pdf   Figure 6
-##    manuscript/figures/app_forest.pdf       Figure 7
-##    manuscript/figures/app_stability.pdf    Figure 8
+##  Output (copy output/ to the Overleaf project; figures/ and tables/ keep these names):
+##    output/tables/tab_cohorts.tex       Table 4
+##    output/tables/tab_app_methods.tex   Table 5
+##    output/tables/tab_app_genes.tex     Table 6
+##    output/tables/tab_app_frailty.tex   Table 7
+##    output/tables/tab_app_loso.tex      Table 8
+##    output/figures/app_km.png           Figure 5
+##    output/figures/app_cv_surface.png   Figure 6
+##    output/figures/app_forest.png       Figure 7
+##    output/figures/app_stability.png    Figure 8
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2); library(survival) })
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
 source(file.path(here, "..", "simulation", "00_setup.R"))
 res <- file.path(here, "results")
-tab_dir <- file.path(here, "..", "manuscript", "tables")
-fig_dir <- file.path(here, "..", "manuscript", "figures")
+tab_dir <- file.path(here, "..", "output", "tables")
+fig_dir <- file.path(here, "..", "output", "figures")
+dir.create(tab_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
 A <- readRDS(file.path(res, "analysis_data.rds"))
 F <- readRDS(file.path(res, "fits.rds")); fits <- F$fits
 I <- readRDS(file.path(res, "inference.rds"))
@@ -109,7 +111,7 @@ g <- ggplot(kd, aes(time, surv, colour = study)) + geom_step(linewidth = 0.6) +
   labs(x = "Years since diagnosis", y = "Overall survival", colour = NULL) +
   scale_colour_brewer(palette = "Dark2") + coord_cartesian(xlim = c(0, 12)) + th +
   theme(legend.position = c(0.85, 0.72))
-ggsave(file.path(fig_dir, "app_km.pdf"), g, width = 5.5, height = 3.6)
+ggsave(file.path(fig_dir, "app_km.png"), g, width = 5.5, height = 3.6, dpi = 300)
 
 ## Figure 6: CV surface of MCP-H
 cvf <- fits[["MCP-H"]][["min"]]$cv
@@ -129,7 +131,7 @@ g <- ggplot(cs, aes(log(lambda), cv, colour = ratio)) + geom_line() + geom_point
   scale_colour_brewer(palette = "Set1", name = expression(lambda[epsilon] / lambda[alpha])) +
   labs(x = expression(log(lambda[alpha])), y = "Cross-validated deviance (5 folds)") + th +
   theme(legend.position = "right")
-ggsave(file.path(fig_dir, "app_cv_surface.pdf"), g, width = 6, height = 3.6)
+ggsave(file.path(fig_dir, "app_cv_surface.png"), g, width = 6, height = 3.6, dpi = 300)
 
 ## Figure 7: global and study-specific hazard ratios
 sth$study <- paste("Study", sth$study)
@@ -152,7 +154,7 @@ g <- ggplot(fd, aes(HR, study, colour = interaction(type, dev))) +
   scale_x_log10() + facet_wrap(~covariate, ncol = 3, scales = "free_x") +
   labs(x = "Hazard ratio per within-study SD (log scale), 95% Wald CI", y = NULL) + th +
   theme(legend.position = "bottom")
-ggsave(file.path(fig_dir, "app_forest.pdf"), g, width = 7.5, height = 2.3 * ceiling(nrow(gen) / 3) + 1)
+ggsave(file.path(fig_dir, "app_forest.png"), g, width = 7.5, height = 2.3 * ceiling(nrow(gen) / 3) + 1, dpi = 300)
 
 ## Figure 8: bootstrap selection frequencies
 sf <- I$boot$selection; sf <- sf[order(-sf$selection_freq), ][1:20, ]
@@ -162,6 +164,6 @@ g <- ggplot(sf, aes(selection_freq, covariate, fill = sel)) + geom_col(width = 0
   scale_fill_manual(values = c("Selected on full data" = "#B2182B", "Not selected" = "grey65"), name = NULL) +
   labs(x = sprintf("Selection frequency in %d within-study bootstrap resamples", I$boot$B_used), y = NULL) +
   th + theme(legend.position = "bottom", axis.text.y = element_text(face = "italic"))
-ggsave(file.path(fig_dir, "app_stability.pdf"), g, width = 5.5, height = 4.8)
+ggsave(file.path(fig_dir, "app_stability.png"), g, width = 5.5, height = 4.8, dpi = 300)
 
 cat("done\n"); print(fs); print(lm_)

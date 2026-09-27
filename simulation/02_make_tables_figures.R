@@ -3,28 +3,28 @@
 ##  Aggregates results/sim_raw_*.csv and results/sim_coverage_*.csv (no model is
 ##  refitted) and writes every simulation table and figure of the manuscript.
 ##
-##  Output (paths fixed by \input / \includegraphics in manuscript/main.tex):
-##    manuscript/tables/tab_scenarios.tex      Table 1
-##    manuscript/tables/tab_sim_base.tex       Table 2
-##    manuscript/tables/tab_sim_coverage.tex   Table 3
-##    manuscript/tables/tab_sim_all.tex        Table A1 (appendix)
-##    manuscript/figures/sim_mcc.pdf           Figure 1
-##    manuscript/figures/sim_fdr_tpr.pdf       Figure 2
-##    manuscript/figures/sim_mse_theta.pdf     Figure 3
-##    manuscript/figures/sim_deviations.pdf    Figure 4
+##  Output (copy output/ to the Overleaf project; figures/ and tables/ keep these names):
+##    output/tables/tab_scenarios.tex      Table 1
+##    output/tables/tab_sim_base.tex       Table 2
+##    output/tables/tab_sim_coverage.tex   Table 3
+##    output/tables/tab_sim_all.tex        Table A1 (appendix)
+##    output/figures/sim_mcc.png           Figure 1
+##    output/figures/sim_fdr_tpr.png       Figure 2
+##    output/figures/sim_mse_theta.png     Figure 3
+##    output/figures/sim_deviations.png    Figure 4
 ##    simulation/results/sim_summary.csv       long-format summary with MC SEs
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2) })
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
 source(file.path(here, "00_setup.R"))
 res_dir <- file.path(here, "results")
-tab_dir <- file.path(here, "..", "manuscript", "tables")
-fig_dir <- file.path(here, "..", "manuscript", "figures")
+tab_dir <- file.path(here, "..", "output", "tables")
+fig_dir <- file.path(here, "..", "output", "figures")
 dir.create(tab_dir, showWarnings = FALSE, recursive = TRUE)
 dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
 
-raw <- do.call(rbind, lapply(list.files(res_dir, "^sim_raw_.*csv$", full.names = TRUE), read.csv))
-cov <- do.call(rbind, lapply(list.files(res_dir, "^sim_coverage_.*csv$", full.names = TRUE), read.csv))
+raw <- do.call(rbind, lapply(list.files(res_dir, "^sim_raw_[0-9]{2}_.*csv$", full.names = TRUE), read.csv))
+cov <- do.call(rbind, lapply(list.files(res_dir, "^sim_coverage_[0-9]{2}_.*csv$", full.names = TRUE), read.csv))
 raw$scenario <- factor(raw$scenario, levels = names(SCENARIOS))
 raw$method <- factor(raw$method, levels = METHODS)
 R_used <- tapply(raw$rep, raw$scenario, function(x) length(unique(x)))
@@ -161,10 +161,10 @@ dotfig <- function(v, lab, file, h = 7.2, w = 8, log = FALSE, sub = S) {
     facet_wrap(~rule_lab) + labs(x = lab, y = NULL) + th +
     guides(colour = guide_legend(nrow = 2), shape = guide_legend(nrow = 2))
   if (log) g <- g + scale_x_log10()
-  ggsave(file.path(fig_dir, file), g, width = w, height = h)
+  ggsave(file.path(fig_dir, file), g, width = w, height = h, dpi = 300)
 }
-dotfig("MCC", "Matthews correlation coefficient (global selection)", "sim_mcc.pdf")
-dotfig("MSE_theta", "MSE of study-specific log-hazard ratios (log scale)", "sim_mse_theta.pdf", log = TRUE)
+dotfig("MCC", "Matthews correlation coefficient (global selection)", "sim_mcc.png")
+dotfig("MSE_theta", "MSE of study-specific log-hazard ratios (log scale)", "sim_mse_theta.png", log = TRUE)
 
 L <- rbind(transform(S, metric = "False discovery rate", y = FDR, se = FDR_se),
            transform(S, metric = "True positive rate", y = TPR, se = TPR_se))
@@ -176,7 +176,7 @@ g <- ggplot(L, aes(x = y, y = scen, colour = method, shape = method)) +
   scale_shape_manual(values = shp, labels = METHOD_LABELS, name = NULL) +
   facet_wrap(~metric, scales = "free_x") + labs(x = "One-standard-error rule", y = NULL) + th +
   guides(colour = guide_legend(nrow = 2), shape = guide_legend(nrow = 2))
-ggsave(file.path(fig_dir, "sim_fdr_tpr.pdf"), g, width = 8, height = 7.2)
+ggsave(file.path(fig_dir, "sim_fdr_tpr.png"), g, width = 8, height = 7.2, dpi = 300)
 
 H <- S[S$method %in% c("MCP-H", "SCAD-H", "LASSO-H") & !S$scenario %in% c("No heterogeneity"), ]
 H2 <- rbind(transform(H, metric = "Deviations: true positive rate", y = TPR_dev, se = TPR_dev_se),
@@ -191,7 +191,7 @@ g <- ggplot(H2, aes(x = y, y = scen, colour = method, shape = rule_lab)) +
   facet_wrap(~metric, scales = "free_x") + labs(x = NULL, y = NULL) + th +
   theme(legend.box = "vertical") +
   guides(colour = guide_legend(nrow = 1, order = 1), shape = guide_legend(nrow = 1, order = 2))
-ggsave(file.path(fig_dir, "sim_deviations.pdf"), g, width = 8, height = 6.8)
+ggsave(file.path(fig_dir, "sim_deviations.png"), g, width = 8, height = 6.8, dpi = 300)
 
 ## key numbers used in the text (printed so they can be checked against main.tex)
 key <- S[S$scenario == "Base", c("method", "rule", "TPR", "FDR", "MCC", "exact", "MSE_theta", "TPR_dev", "FDR_dev", "seconds")]
