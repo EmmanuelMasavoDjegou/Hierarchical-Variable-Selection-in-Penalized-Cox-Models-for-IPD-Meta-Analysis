@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "hiermetacox: Hierarchical Nonconvex Penalized Stratified Cox Models for IPD Meta-Analysis"
+version: 1.0.0
+license: MIT
+repository-code: "https://github.com/EmmanuelMasavoDjegou/Hierarchical-Variable-Selection-in-Penalized-Cox-Models-for-IPD-Meta-Analysis"
+authors:
+  - family-names: Djegou
+    given-names: Emmanuel
+    orcid: "https://orcid.org/0009-0007-5527-2301"
+  - family-names: Dehigbe
+    given-names: Bertin
+  - family-names: Botchway
+    given-names: Jarrad
+  - family-names: Boamah
+    given-names: Emmanuel
+preferred-citation:
+  type: article
+  title: "Hierarchical Variable Selection for Nonconvex Penalized Cox Models in Individual-Participant-Data Meta-Analysis"
+  authors:
+    - family-names: Djegou
+      given-names: Emmanuel
+    - family-names: Dehigbe
+      given-names: Bertin
+    - family-names: Botchway
+      given-names: Jarrad
+    - family-names: Boamah
+      given-names: Emmanuel
+  notes: "Preprint"

@@ -1,0 +1,9 @@
+"method","label","genes_min","genes_1se","dev_min","dev_1se","ratio_1se","overlap_with_MCPH","seconds"
+"MCP-H","MCP, hierarchical (proposed)",6,2,1,0,2,6,18.5
+"SCAD-H","SCAD, hierarchical (proposed)",8,7,0,0,2,6,10.4
+"LASSO-H","Lasso, hierarchical",42,23,1,0,2,6,4.6
+"MCP-S","MCP, stratified common effects",4,2,NA,NA,1,4,4.4
+"MCP-P","MCP, naive pooling",8,4,NA,NA,NA,6,12.7
+"SCAD-P","SCAD, naive pooling",35,4,NA,NA,NA,6,6.3
+"LASSO-P","Lasso, naive pooling",56,11,NA,NA,NA,6,23.8
+"ENet-P","Elastic net, naive pooling",59,13,NA,NA,NA,6,24.8

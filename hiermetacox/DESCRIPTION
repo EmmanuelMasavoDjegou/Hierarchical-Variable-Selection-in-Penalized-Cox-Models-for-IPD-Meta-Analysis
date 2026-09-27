@@ -1,0 +1,31 @@
+Package: hiermetacox
+Type: Package
+Title: Hierarchical Nonconvex Penalized Stratified Cox Models for Individual-Participant-Data Meta-Analysis
+Version: 1.0.0
+Authors@R: c(
+    person("Emmanuel", "Djegou", email = "emmanueldjegou5@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0007-5527-2301")),
+    person("Bertin", "Dehigbe", role = "aut"),
+    person("Jarrad", "Botchway", role = "aut"),
+    person("Emmanuel", "Boamah", role = "aut"))
+Description: Fits one-stage stratified Cox models for individual-participant-data
+    (IPD) meta-analysis of time-to-event outcomes in which each study-specific
+    log-hazard ratio is decomposed as a shared global effect plus a sparse
+    study-specific deviation. Global effects and deviations are penalized by
+    MCP, SCAD or lasso penalties with separate tuning parameters, a hierarchy
+    constraint ensures that a covariate excluded globally is excluded in every
+    study, and each study keeps its own unspecified baseline hazard. Includes a
+    compiled coordinate-descent path algorithm, joint two-dimensional
+    cross-validation with study-stratified folds, post-selection Wald
+    inference, bootstrap selection stability, and a data generator for
+    simulation studies.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1)
+Imports: survival, stats
+Suggests: testthat (>= 3.0.0)
+NeedsCompilation: yes
+URL: https://github.com/EmmanuelMasavoDjegou/Hierarchical-Variable-Selection-in-Penalized-Cox-Models-for-IPD-Meta-Analysis
+BugReports: https://github.com/EmmanuelMasavoDjegou/Hierarchical-Variable-Selection-in-Penalized-Cox-Models-for-IPD-Meta-Analysis/issues
+Config/testthat/edition: 3
+RoxygenNote: 7.3.1

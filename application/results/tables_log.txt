@@ -1,0 +1,22 @@
+Warning messages:
+1: Removed 27 rows containing missing values (`geom_line()`). 
+2: Removed 27 rows containing missing values (`geom_point()`). 
+done
+  rule  V n_selected overlap n_dev                           genes
+1  min  5          6       1     1 IGF2 CRYAB GAS1 CXCL9 GMPR OSR2
+2  min 10          2       1     0                      MFAP4 GMPR
+3  1se  5          2       0     0                      MFAP4 GMPR
+4  1se 10          0       0     0                                
+    method rule         C   n_genes
+1   ENet-P  1se 0.5829176 10.000000
+2  LASSO-P  1se 0.5806318  9.500000
+3    MCP-H  1se 0.5113664  0.500000
+4    MCP-P  1se 0.5393403  1.833333
+5    MCP-S  1se 0.5113664  0.500000
+6   SCAD-H  1se 0.5453112  2.333333
+7   ENet-P  min 0.6036739 42.666667
+8  LASSO-P  min 0.6027129 38.333333
+9    MCP-H  min 0.5612271  4.666667
+10   MCP-P  min 0.5888123  9.833333
+11   MCP-S  min 0.5612271  4.666667
+12  SCAD-H  min 0.5771392  9.166667

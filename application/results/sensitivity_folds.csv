@@ -1,0 +1,5 @@
+"rule","V","n_selected","overlap","n_dev","genes"
+"min",5,6,1,1,"IGF2 CRYAB GAS1 CXCL9 GMPR OSR2"
+"min",10,2,1,0,"MFAP4 GMPR"
+"1se",5,2,0,0,"MFAP4 GMPR"
+"1se",10,0,0,0,""

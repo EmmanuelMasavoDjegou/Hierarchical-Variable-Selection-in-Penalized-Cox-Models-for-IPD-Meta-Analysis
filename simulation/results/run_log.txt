@@ -1,0 +1,57 @@
+[20:20:05] scenario 1: Base (0 done)
+   rep 10  [20:21:25]
+   rep 20  [20:24:19]
+[20:25:41] scenario 2: Independent covariates (0 done)
+   rep 10  [20:27:52]
+   rep 20  [20:30:09]
+[20:31:27] scenario 3: Strong correlation (0 done)
+   rep 10  [20:34:06]
+   rep 20  [20:37:31]
+[20:38:41] scenario 4: No heterogeneity (0 done)
+   rep 10  [20:40:52]
+   rep 20  [20:43:03]
+[20:44:08] scenario 5: Strong heterogeneity (0 done)
+   rep 10  [20:46:11]
+   rep 20  [20:47:51]
+[20:48:56] scenario 6: Dense heterogeneity (0 done)
+[20:51:51] scenario 1: Base (25 done)
+[20:51:51] scenario 2: Independent covariates (25 done)
+[20:51:51] scenario 3: Strong correlation (25 done)
+[20:51:51] scenario 4: No heterogeneity (25 done)
+[20:51:51] scenario 5: Strong heterogeneity (25 done)
+[20:51:51] scenario 6: Dense heterogeneity (3 done)
+   rep 10  [20:53:01]
+   rep 20  [20:54:20]
+[20:54:58] scenario 7: Heavy censoring (0 done)
+   rep 10  [20:57:02]
+   rep 20  [20:58:53]
+[21:00:03] scenario 8: Weak signals (0 done)
+   rep 10  [21:02:04]
+   rep 20  [21:03:56]
+[21:05:24] scenario 9: p = 200 (0 done)
+   rep 10  [21:08:29]
+   rep 20  [21:11:46]
+[21:13:22] scenario 10: p = 500 (0 done)
+   rep 10  [21:20:15]
+[21:29:04] scenario 1: Base (25 done)
+[21:29:04] scenario 2: Independent covariates (25 done)
+[21:29:04] scenario 3: Strong correlation (25 done)
+[21:29:04] scenario 4: No heterogeneity (25 done)
+[21:29:04] scenario 5: Strong heterogeneity (25 done)
+[21:29:04] scenario 6: Dense heterogeneity (25 done)
+[21:29:04] scenario 7: Heavy censoring (25 done)
+[21:29:04] scenario 8: Weak signals (25 done)
+[21:29:04] scenario 9: p = 200 (25 done)
+[21:29:04] scenario 10: p = 500 (17 done)
+   rep 20  [21:31:16]
+[21:34:47] scenario 11: Ten studies (0 done)
+   rep 10  [21:36:42]
+   rep 20  [21:38:51]
+[21:39:53] scenario 12: Unequal study sizes (0 done)
+   rep 10  [21:41:41]
+   rep 20  [21:42:48]
+[21:43:26] scenario 13: Small studies, p > n_k (0 done)
+   rep 10  [21:46:51]
+   rep 20  [21:50:17]
+done
+Execution halted
