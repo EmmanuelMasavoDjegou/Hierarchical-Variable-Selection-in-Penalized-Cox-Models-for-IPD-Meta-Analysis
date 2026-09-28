@@ -9,6 +9,7 @@
 ##    output/tables/tab_oracle_inference.tex   Table 5  (bias, SD/SE, coverage, ...)
 ##    output/figures/oracle_selection.png      Figure 5
 ##    output/figures/oracle_qq.png             Figure 6
+##    output/tables/tab_nearcancel.tex         Table 6  (near-cancellation, Theorem 4.2)
 ##    simulation/results/oracle_summary.csv    per-parameter summaries
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2) })
@@ -116,6 +117,35 @@ g <- ggplot(Q, aes(sample = z, colour = method)) +
   theme_bw(base_size = 9) + theme(panel.grid.minor = element_blank(),
                                   strip.background = element_rect(fill = "grey93"))
 ggsave(file.path(fig_dir, "oracle_qq.png"), g, width = 8.5, height = 5.8, dpi = 300)
+
+## ---- Table 6: near-cancellation experiment (05_near_cancellation.R) --------------------
+ndir <- file.path(here, "results", "nearcancel")
+nf <- list.files(ndir, "^r[0-9]{3}\\.csv$", full.names = TRUE)
+if (length(nf)) {
+  y <- do.call(rbind, lapply(nf, read.csv))
+  a <- aggregate(cbind(theorem_majority, majority, alg_worse) ~ covariate + q + ratio + penalty, y, mean)
+  cond_b <- function(q, r) (3 - q) * r^2 > 1          # delta F(l_e) > F(l_a), m = 3
+  rows <- c()
+  for (cv in c(3, 4)) {
+    qv <- a$q[a$covariate == cv][1]
+    rows <- c(rows, sprintf("\\multicolumn{8}{@{}l}{\\emph{Covariate %d: $q=%d$, $\\delta=%d$}} \\\\", cv, qv, 3 - qv))
+    for (r in sort(unique(a$ratio))) {
+      m <- a[a$covariate == cv & a$ratio == r & a$penalty == "MCP", ]
+      sc <- a[a$covariate == cv & a$ratio == r & a$penalty == "SCAD", ]
+      rows <- c(rows, sprintf("$r=%s$ & %s & %s & %s & %s & %s & %s & %s \\\\", format(r),
+        if (cond_b(qv, r)) "yes" else "no",
+        f2(m$theorem_majority), f2(m$majority), f2(m$alg_worse),
+        f2(sc$theorem_majority), f2(sc$majority), f2(sc$alg_worse)))
+    }
+    if (cv == 3) rows <- c(rows, "\\midrule")
+  }
+  writeLines(c("\\begin{tabular}{@{}lccccccc@{}}", "\\toprule",
+    "& & \\multicolumn{3}{c}{MCP, hierarchical} & \\multicolumn{3}{c}{SCAD, hierarchical} \\\\",
+    "\\cmidrule(lr){3-5}\\cmidrule(l){6-8}",
+    "Ratio & (b) holds & Theorem & Algorithm & Inferior & Theorem & Algorithm & Inferior \\\\",
+    "\\midrule", rows, "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_nearcancel.tex"))
+  cat("near-cancellation replicates:", length(nf), "\n"); print(a, digits = 2)
+}
 
 print(sel, digits = 2)
 print(aggregate(cbind(abs(bias), coverage, eff) ~ method + n, T5, mean), digits = 3)

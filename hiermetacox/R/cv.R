@@ -23,6 +23,9 @@ hmc_folds <- function(study, status, nfolds = 5, seed = NULL) {
 
 #' Joint cross-validation of the two tuning parameters
 #'
+#' The criterion is the total cross-validated deviance reduction relative to the
+#' null model, summed over folds; its standard error uses the same fold scores.
+#'
 #' Selects \eqn{(\lambda_\alpha,\lambda_\varepsilon)} over the two-dimensional grid
 #' formed by a path of \code{nlambda} values of \eqn{\lambda_\alpha} and the ratios
 #' \eqn{r=\lambda_\varepsilon/\lambda_\alpha} in \code{ratio}. The criterion is the
@@ -79,25 +82,26 @@ cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso",
       }
     }
   }
-  ## CV criterion and its standard error use the same fold-level quantity.
+  ## The criterion and its standard error are built from ONE fold-level quantity.
   ## c_i: deviance contribution of participant i from out-of-fold linear
-  ## predictors and full-data within-study risk sets; D_v(lambda) = sum of c_i
-  ## over fold v, so that CV = sum_v D_v. The fold score used for both the
-  ## criterion and its SE is the deviance reduction relative to the null model,
-  ## Delta_v(lambda) = D_v(lambda) - D_v(null); sum_v Delta_v = CV - CV(null),
-  ## which has the same minimiser as CV, and SE = sqrt(V) * sd(Delta_v), the
-  ## standard error of a sum of V fold scores. Centring at the null model removes
-  ## the baseline risk-set terms, which are common to all models.
+  ## predictors and full-data within-study risk sets; D_v(lambda): sum of c_i
+  ## over fold v; D_v^0: the same for the null model (all linear predictors 0).
+  ## Fold score: Delta_v(lambda) = D_v(lambda) - D_v^0 (deviance reduction).
+  ## Criterion:  CV(lambda) = sum_v Delta_v(lambda)   (same minimiser as sum_v D_v).
+  ## SE:         sqrt(V) * sd(Delta_1, ..., Delta_V), i.e. V times the usual
+  ##             standard error of the fold mean. Folds share training data, so
+  ##             this is the conventional heuristic, not an exact standard error.
   cvm <- matrix(NA_real_, L, R, dimnames = list(NULL, paste0("ratio=", ratio)))
   cvsd <- cvm
   fl <- sort(unique(fs))
-  D0v <- vapply(fl, function(v) sum(hmc_dev_terms(D, rep(0, D$N))[fs == v]), 0)
+  c0 <- hmc_dev_terms(D, rep(0, D$N))
+  D0v <- vapply(fl, function(v) sum(c0[fs == v]), 0)
   for (r in seq_len(R)) for (l in seq_len(L)) {
     if (anyNA(eta_cv[, l, r])) next
     ci <- hmc_dev_terms(D, eta_cv[, l, r])
-    Dv <- vapply(fl, function(v) sum(ci[fs == v]), 0)
-    cvm[l, r] <- sum(Dv)
-    cvsd[l, r] <- sqrt(V) * sd(Dv - D0v)
+    Delta <- vapply(fl, function(v) sum(ci[fs == v]), 0) - D0v
+    cvm[l, r] <- sum(Delta)
+    cvsd[l, r] <- sqrt(V) * sd(Delta)
   }
   dfm <- matrix(NA_real_, L, R)
   for (r in seq_len(R)) {

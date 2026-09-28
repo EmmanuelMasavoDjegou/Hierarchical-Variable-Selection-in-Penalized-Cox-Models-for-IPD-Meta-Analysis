@@ -129,3 +129,42 @@ test_that("the CV criterion is exactly the sum of its fold-level scores", {
   expect_equal(sum(hiermetacox:::hmc_dev_terms(D, eta)),
                2 * D$N * hiermetacox:::hmc_loss(D, eta), tolerance = 1e-10)
 })
+
+test_that("deviation coordinates satisfy the weighted KKT conditions (MCP and SCAD)", {
+  ## Checks the exact omega_k weighting of the deviation penalty and the hierarchy:
+  ## a covariate whose global effect is at the hierarchy boundary (alpha_j would be
+  ## zero but deviations are not; the constrained infimum is not attained) is
+  ## identified by a non-stationary alpha_j and excluded, as described in Section 4.
+  set.seed(9)
+  s <- sim_ipd(K = 4, n = 150, p = 20, sd.eps = 0.8, n.dev = 1)
+  d <- s$data; X <- as.matrix(d[, -(1:3)])
+  n_checked <- 0
+  for (pen in c("MCP", "SCAD")) {
+    f <- hmcox(X, d$time, d$status, d$study, penalty = pen, ratio = 1,
+               nlambda = 12, tol = 1e-11, max.outer = 500)
+    D <- f$data; g0 <- f$gamma
+    for (l in c(6, 9, 12)) {
+      cf <- coef(f, l); lamA <- f$lambda[l]; lamE <- lamA * f$ratio
+      eta <- rowSums(D$X * cf$theta[D$sid, ])
+      dP <- function(t, lam) { t <- abs(t)
+        if (pen == "MCP") pmax(lam - t / g0, 0) else
+          ifelse(t <= lam, lam, pmax(g0 * lam - t, 0) / (g0 - 1)) }
+      sca <- hiermetacox:::hmc_loss(D, eta, score = TRUE)$score
+      for (j in which(cf$alpha != 0)) {
+        if (abs(sca[j] - dP(cf$alpha[j], lamA) * sign(cf$alpha[j])) > 1e-6) next  # boundary
+        nzero <- sum(cf$eps[, j] == 0)
+        for (k in seq_len(D$K)) {
+          Dk <- D; Dk$X <- matrix(D$X[, j] * (D$sid == k), ncol = 1)
+          sc <- hiermetacox:::hmc_loss(Dk, eta, score = TRUE)$score
+          om <- D$omega[k]; e <- cf$eps[k, j]
+          if (e != 0) {                     # stationarity with the omega-weighted penalty
+            expect_lt(abs(sc - om * dP(om * e, lamE) * sign(e)), 1e-6); n_checked <- n_checked + 1
+          } else if (nzero >= 2) {          # sharing constraint not binding
+            expect_true(abs(sc) <= om * lamE + 1e-8); n_checked <- n_checked + 1
+          }
+        }
+      }
+    }
+  }
+  expect_gt(n_checked, 50)
+})

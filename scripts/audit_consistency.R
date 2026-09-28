@@ -18,7 +18,7 @@ R_PAPER <- 50
 
 ## ---- code side -----------------------------------------------------------------
 tabs <- c("tab_scenarios", "tab_sim_base", "tab_sim_coverage", "tab_sim_all",
-          "tab_oracle_selection", "tab_oracle_inference", "tab_cohorts",
+          "tab_oracle_selection", "tab_oracle_inference", "tab_nearcancel", "tab_cohorts",
           "tab_app_methods", "tab_app_genes", "tab_app_frailty", "tab_app_loso")
 figs <- c("sim_mcc", "sim_fdr_tpr", "sim_mse_theta", "sim_deviations",
           "oracle_selection", "oracle_qq",
@@ -40,6 +40,8 @@ if (length(raw)) {
 orc <- list.files("simulation/results/oracle", "^n[0-9]{4}_r[0-9]{3}\\.csv$", full.names = TRUE)
 check(sprintf("%d oracle replicate files (%d expected: 4 sizes x 200)", length(orc), 800),
       length(orc) == 800)
+ncf <- list.files("simulation/results/nearcancel", "^r[0-9]{3}\\.csv$", full.names = TRUE)
+check(sprintf("%d near-cancellation replicate files (100 expected)", length(ncf)), length(ncf) == 100)
 if (length(raw)) {
   st <- list.files("output/tables", "^tab_sim", full.names = TRUE)
   check("simulation tables are newer than the raw results (re-run 02_make_tables_figures.R)",
@@ -56,7 +58,9 @@ if (length(args)) {
   for (f in figs) check(paste("figure", f, "is used in the manuscript"), paste0(f, ".png") %in% used)
   T <- setup$TUNE; B <- setup$BASE
   check("V = 5 folds", grepl("recommend \\$V=5\\$ folds", tex) && T$nfolds == 5)
-  check("ratio grid {0.5,1,2}", grepl("r\\\\in\\\\\\{0.5,1,2\\\\\\}", tex) && identical(T$ratio, c(0.5, 1, 2)))
+  rg <- paste(format(T$ratio, trim = TRUE, drop0trailing = TRUE), collapse = ",")
+  check(sprintf("ratio grid {%s} stated as in 00_setup.R", rg),
+        grepl(paste0("r\\in\\{", rg, "\\}"), tex, fixed = TRUE))
   check("M = 20 lambda values", grepl("\\$M=20\\$", tex) && T$nlambda == 20)
   check("kappa = 0.05", grepl("\\\\kappa=0.05", tex) && T$lambda.min.ratio == 0.05)
   check("d_max = 100", grepl("d_\\{\\\\max\\}=100", tex) && T$dfmax == 100)
@@ -74,7 +78,7 @@ if (length(args)) {
                   if (length(miss)) paste0(" (missing: ", paste(miss, collapse = ", "), ")") else ""),
           length(miss) == 0)
   }
-  ntodo <- length(grab("TODO"))
+  ntodo <- length(grab("TODO|FIXME|XXX|[Pp]laceholder"))
   check(sprintf("no TODO comments left (%d remaining)", ntodo), ntodo == 0)
   ntbd <- length(grab("\\\\TBD"))
   check(sprintf("no TBD placeholders left (%d remaining)", ntbd), ntbd == 0)

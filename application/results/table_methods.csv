@@ -1,13 +1,13 @@
 "method","label","genes_min","genes_1se","dev_min","dev_1se","ratio_1se","overlap_with_MCPH","seconds"
-"MCP-H","MCP, hierarchical (proposed)",6,2,1,0,2,6,10.1
-"SCAD-H","SCAD, hierarchical (proposed)",8,8,0,0,2,6,5.1
-"LASSO-H","Lasso, hierarchical",42,33,1,0,2,6,2.3
-"ENet-H","Elastic net, hierarchical",59,37,3,0,2,6,2.3
-"MCP-S","MCP, stratified common effects",4,2,NA,NA,1,4,2.1
-"SCAD-S","SCAD, stratified common effects",8,8,NA,NA,1,6,1.7
-"LASSO-S","Lasso, stratified common effects",56,33,NA,NA,1,6,0.6
+"MCP-H","MCP, hierarchical (proposed)",6,2,1,0,2,6,10.8
+"SCAD-H","SCAD, hierarchical (proposed)",8,8,0,0,2,6,7.1
+"LASSO-H","Lasso, hierarchical",42,33,1,0,2,6,5.1
+"ENet-H","Elastic net, hierarchical",59,37,3,0,2,6,4.3
+"MCP-S","MCP, stratified common effects",4,2,NA,NA,1,4,2.9
+"SCAD-S","SCAD, stratified common effects",8,8,NA,NA,1,6,4
+"LASSO-S","Lasso, stratified common effects",56,33,NA,NA,1,6,0.5
 "ENet-S","Elastic net, stratified common effects",60,37,NA,NA,1,6,0.5
-"MCP-P","MCP, naive pooling",5,4,NA,NA,1,5,2.2
-"SCAD-P","SCAD, naive pooling",19,5,NA,NA,1,6,1.5
-"LASSO-P","Lasso, naive pooling",60,32,NA,NA,1,6,0.6
-"ENet-P","Elastic net, naive pooling",64,44,NA,NA,1,6,0.5
+"MCP-P","MCP, naive pooling",5,4,NA,NA,1,5,2.3
+"SCAD-P","SCAD, naive pooling",19,5,NA,NA,1,6,1.6
+"LASSO-P","Lasso, naive pooling",60,32,NA,NA,1,6,0.7
+"ENet-P","Elastic net, naive pooling",64,44,NA,NA,1,6,0.7

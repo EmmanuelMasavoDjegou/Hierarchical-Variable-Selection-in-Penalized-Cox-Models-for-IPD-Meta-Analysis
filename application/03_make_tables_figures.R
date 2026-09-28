@@ -4,11 +4,11 @@
 ##  01_prepare_data.R and 02_fit_and_infer.R (nothing is refitted).
 ##
 ##  Output (copy output/ to the Overleaf project; figures/ and tables/ keep these names):
-##    output/tables/tab_cohorts.tex       Table 6
-##    output/tables/tab_app_methods.tex   Table 7
-##    output/tables/tab_app_genes.tex     Table 8
-##    output/tables/tab_app_frailty.tex   Table 9
-##    output/tables/tab_app_loso.tex      Table 10
+##    output/tables/tab_cohorts.tex       Table 7
+##    output/tables/tab_app_methods.tex   Table 8
+##    output/tables/tab_app_genes.tex     Table 9
+##    output/tables/tab_app_frailty.tex   Table 10
+##    output/tables/tab_app_loso.tex      Table 11
 ##    output/figures/app_km.png           Figure 7
 ##    output/figures/app_cv_surface.png   Figure 8
 ##    output/figures/app_forest.png       Figure 9
@@ -39,7 +39,7 @@ f3 <- function(x) formatC(x, format = "f", digits = 3)
 pfmt <- function(p) ifelse(p < 1e-4, formatC(p, format = "e", digits = 1), formatC(p, format = "f", digits = 4))
 it <- function(g) paste0("\\textit{", g, "}")
 
-## Table 6: cohorts
+## Table 7: cohorts
 writeLines(c("\\begin{tabular}{@{}llrrrrr@{}}", "\\toprule",
   "Study & GEO/TCGA series & $n_k$ & Deaths & Censored (\\%) & Median OS (yr) & Median follow-up (yr) \\\\",
   "\\midrule",
@@ -50,7 +50,7 @@ writeLines(c("\\begin{tabular}{@{}llrrrrr@{}}", "\\toprule",
           round(100 * (1 - sum(coh$Events) / sum(coh$N)))),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_cohorts.tex"))
 
-## Table 7: methods
+## Table 8: methods
 dv <- function(x) ifelse(is.na(x), "--", as.character(x))
 writeLines(c("\\begin{tabular}{@{}lrrrrr@{}}", "\\toprule",
   "& \\multicolumn{2}{c}{Genes selected} & \\multicolumn{2}{c}{Deviations} & \\\\",
@@ -60,7 +60,7 @@ writeLines(c("\\begin{tabular}{@{}lrrrrr@{}}", "\\toprule",
           dv(tm$dev_1se), formatC(tm$seconds, format = "f", digits = 1)),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_methods.tex"))
 
-## Table 8: genes (main MCP-H model)
+## Table 9: genes (main MCP-H model)
 gen <- gen[order(gen$p_value), ]
 writeLines(c("\\begin{tabular}{@{}lrrrrrrcc@{}}", "\\toprule",
   "Gene & $\\exp(\\hat\\alpha_j)$ & HR & 95\\% CI & $p$ & $p_{\\rm Holm}$ & Dev. & Boot. freq. & Methods \\\\",
@@ -71,13 +71,13 @@ writeLines(c("\\begin{tabular}{@{}lrrrrrrcc@{}}", "\\toprule",
           gen$n_deviating_studies, f2(gen$selection_freq), gen$selected_by, length(METHODS)),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_genes.tex"))
 
-## Table 9: frailty sensitivity
+## Table 10: frailty sensitivity
 writeLines(c("\\begin{tabular}{@{}llll@{}}", "\\toprule",
   "Gene & Stratified Cox & Shared gamma frailty & Naive pooling \\\\", "\\midrule",
   sprintf("%s & %s & %s & %s \\\\", it(fr$gene), fr$stratified, fr$frailty, fr$pooled),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_frailty.tex"))
 
-## Table 10: leave-one-study-out C-index (rows = methods, columns = held-out cohort)
+## Table 11: leave-one-study-out C-index (rows = methods, columns = held-out cohort)
 lm_ <- aggregate(cbind(C, n_genes) ~ method + rule, lo, mean)
 studies <- sort(unique(lo$held_out))
 rows <- c()
@@ -128,7 +128,7 @@ g <- ggplot(cs, aes(log(lambda), cv, colour = ratio)) + geom_line() + geom_point
   geom_point(data = pts, aes(shape = rule), size = 3, colour = "black") +
   scale_shape_manual(values = c(minimum = 4, "one-SE" = 1), name = NULL) +
   scale_colour_brewer(palette = "Set1", name = expression(lambda[epsilon] / lambda[alpha])) +
-  labs(x = expression(log(lambda[alpha])), y = "Cross-validated deviance (5 folds)") + th +
+  labs(x = expression(log(lambda[alpha])), y = "CV deviance reduction vs null (5 folds)") + th +
   theme(legend.position = "right")
 ggsave(file.path(fig_dir, "app_cv_surface.png"), g, width = 6, height = 3.6, dpi = 300)
 

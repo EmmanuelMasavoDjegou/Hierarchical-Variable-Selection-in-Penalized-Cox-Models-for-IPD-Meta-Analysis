@@ -105,7 +105,8 @@ within one SE) are returned from the same run.
 │   ├── 01_run_simulation.R           Monte Carlo runner; resumable
 │   ├── 02_make_tables_figures.R      aggregates results WITHOUT refitting
 │   ├── 03_oracle_study.R             oracle experiment (Section 5.5); resumable
-│   ├── 04_oracle_tables_figures.R    Tables 4-5 and Figures 5-6
+│   ├── 04_oracle_tables_figures.R    Tables 4-6 and Figures 5-6
+│   ├── 05_near_cancellation.R        near-cancellation experiment (Section 5.5)
 │   ├── run_all.sh                    runs both experiments (R = 50; oracle R = 200)
 │   └── results/                      per-replicate CSVs, summaries, run log
 │
@@ -148,11 +149,12 @@ transfer the table values from `output/tables/`.
 | 3 | Coverage of post-selection Wald intervals | same | `tab_sim_coverage.tex` |
 | 4 | Oracle experiment: support recovery, equality with the oracle | `simulation/04_oracle_tables_figures.R` | `tab_oracle_selection.tex` |
 | 5 | Oracle experiment: bias, SD/SE, coverage, efficiency, normality | same | `tab_oracle_inference.tex` |
-| 6 | Cohort characteristics | `application/03_make_tables_figures.R` | `tab_cohorts.tex` |
-| 7 | Genes selected by each method | same | `tab_app_methods.tex` |
-| 8 | Selected genes: HR, 95% CI, p, stability | same | `tab_app_genes.tex` |
-| 9 | Stratified vs frailty vs pooled hazard ratios | same | `tab_app_frailty.tex` |
-| 10 | Leave-one-study-out C-index | same | `tab_app_loso.tex` |
+| 6 | Near-cancellation experiment: Theorem 4.2 check and algorithm check | same (from `05_near_cancellation.R` output) | `tab_nearcancel.tex` |
+| 7 | Cohort characteristics | `application/03_make_tables_figures.R` | `tab_cohorts.tex` |
+| 8 | Genes selected by each method | same | `tab_app_methods.tex` |
+| 9 | Selected genes: HR, 95% CI, p, stability | same | `tab_app_genes.tex` |
+| 10 | Stratified vs frailty vs pooled hazard ratios | same | `tab_app_frailty.tex` |
+| 11 | Leave-one-study-out C-index | same | `tab_app_loso.tex` |
 | A1 | All scenarios, all methods | `simulation/02_make_tables_figures.R` | `tab_sim_all.tex` |
 
 Long-format results with Monte Carlo standard errors are in
@@ -279,7 +281,8 @@ near-cancelled cells where a deviation almost cancels the global effect).
 ```bash
 cd simulation
 NCORES=8 Rscript 03_oracle_study.R 200    # 4 study sizes x 200 replicates
-Rscript 04_oracle_tables_figures.R        # Tables 4-5 and Figures 5-6 -> output/
+NCORES=8 Rscript 05_near_cancellation.R 100   # Theorem 4.2, condition (b)
+Rscript 04_oracle_tables_figures.R        # Tables 4-6 and Figures 5-6 -> output/
 ```
 
 This experiment verifies the oracle theory for the proposed hierarchical MCP and
@@ -292,15 +295,23 @@ reduced parameters, the estimate, the oracle estimate and SE, and the coverage
 of the refitted Wald interval. Three tuning strategies are compared: the
 boundary rate of Remark 4.2, lambda = 1.1 sqrt(log(max(p, N)) / N), and the two
 cross-validation rules. About 7 hours on one core; divide by `NCORES`.
+
+The near-cancellation experiment (`05_near_cancellation.R`, about 30 minutes)
+tests condition (b) of Theorem 4.2, including the multiplicity q(c) of an
+alternative coefficient value. For each replicate it records two separate things:
+whether the majority representation has the smallest penalty among all feasible
+representations of the oracle fit (the theorem's claim, checked exactly), and
+whether the algorithm returns it, and if not, whether the algorithm stopped at a
+local minimiser with a larger objective than the oracle point.
 `./run_all.sh` runs both simulation experiments.
 
 ### Real data (Section 6)
 
 ```bash
 cd application
-Rscript 01_prepare_data.R            # Table 6 data, p = 500 genes
+Rscript 01_prepare_data.R            # Table 7 data, p = 500 genes
 Rscript 02_fit_and_infer.R           # all fits, inference, validation (~45 min)
-Rscript 03_make_tables_figures.R     # Tables 6-10 and Figures 7-10 -> output/
+Rscript 03_make_tables_figures.R     # Tables 7-11 and Figures 7-10 -> output/
 ```
 
 The small CSV outputs behind every application table are committed in
