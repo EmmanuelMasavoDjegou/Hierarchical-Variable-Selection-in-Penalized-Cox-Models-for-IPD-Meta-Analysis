@@ -4,7 +4,7 @@
 \alias{hmc_lambda_seq}
 \title{Lambda sequence for the global effects}
 \usage{
-hmc_lambda_seq(D, nlambda = 25, lambda.min.ratio = NULL)
+hmc_lambda_seq(D, nlambda = 25, lambda.min.ratio = NULL, l1 = 1)
 }
 \description{
 Lambda sequence for the global effects

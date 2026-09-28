@@ -9,8 +9,8 @@ cv.hmcox(
   time,
   status,
   study,
-  penalty = c("MCP", "SCAD", "lasso"),
-  gamma = switch(penalty, SCAD = 3.7, 3),
+  penalty = c("MCP", "SCAD", "lasso", "enet"),
+  gamma = switch(penalty, SCAD = 3.7, enet = 0.5, 3),
   ratio = c(0.5, 1, 2),
   nfolds = 5,
   foldid = NULL,
@@ -33,9 +33,11 @@ cv.hmcox(
 
 \item{study}{study (stratum) membership, length N.}
 
-\item{penalty}{"MCP" (default), "SCAD" or "lasso".}
+\item{penalty}{"MCP" (default), "SCAD", "lasso" or "enet" (elastic net,
+penalty \eqn{\lambda\{a|b|+(1-a)b^2/2\}} as in glmnet).}
 
-\item{gamma}{concavity parameter (default 3 for MCP, 3.7 for SCAD).}
+\item{gamma}{concavity parameter (default 3 for MCP, 3.7 for SCAD); for
+\code{penalty = "enet"} it is the mixing parameter \eqn{a} (default 0.5).}
 
 \item{ratio}{vector of ratios \eqn{\lambda_\varepsilon/\lambda_\alpha} (default 0.5, 1, 2).}
 

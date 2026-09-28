@@ -12,7 +12,7 @@ Description: Fits one-stage stratified Cox models for individual-participant-dat
     (IPD) meta-analysis of time-to-event outcomes in which each study-specific
     log-hazard ratio is decomposed as a shared global effect plus a sparse
     study-specific deviation. Global effects and deviations are penalized by
-    MCP, SCAD or lasso penalties with separate tuning parameters, a hierarchy
+    MCP, SCAD, lasso or elastic-net penalties with separate tuning parameters, a hierarchy
     constraint ensures that a covariate excluded globally is excluded in every
     study, and each study keeps its own unspecified baseline hazard. Includes a
     compiled coordinate-descent path algorithm, joint two-dimensional

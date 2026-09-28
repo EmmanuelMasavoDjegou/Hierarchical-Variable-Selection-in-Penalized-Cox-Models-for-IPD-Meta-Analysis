@@ -43,6 +43,18 @@ test_that("lasso path matches glmnet's stratified Cox model", {
   expect_lt(max(abs(as.matrix(coef(g)) - f$alpha)), 1e-4)
 })
 
+test_that("elastic-net path matches glmnet's stratified Cox model", {
+  skip_if_not_installed("glmnet")
+  s <- make_data(2, n = 150, p = 20, ties = FALSE); d <- s$data; X <- as.matrix(d[, -(1:3)])
+  f <- hmcox(X, d$time, d$status, d$study, penalty = "enet", gamma = 0.5,
+             heterogeneity = FALSE, nlambda = 10, tol = 1e-10)
+  D <- f$data
+  y <- glmnet::stratifySurv(survival::Surv(D$time, D$status), D$sid)
+  g <- glmnet::glmnet(D$X, y, family = "cox", alpha = 0.5, lambda = f$lambda,
+                      standardize = FALSE, thresh = 1e-13)
+  expect_lt(max(abs(as.matrix(coef(g)) - f$alpha)), 1e-4)
+})
+
 test_that("MCP and SCAD solutions satisfy the KKT conditions for global effects", {
   s <- make_data(2, n = 150, p = 20, ties = FALSE); d <- s$data; X <- as.matrix(d[, -(1:3)])
   for (pen in c("MCP", "SCAD")) {
@@ -64,7 +76,7 @@ test_that("hierarchy holds, a sharing study exists, and the path converges", {
   set.seed(3)
   s <- sim_ipd(K = 5, n = 150, p = 30, sd.eps = 0.8)
   d <- s$data; X <- as.matrix(d[, -(1:3)])
-  for (pen in c("MCP", "SCAD", "lasso")) {
+  for (pen in c("MCP", "SCAD", "lasso", "enet")) {
     f <- hmcox(X, d$time, d$status, d$study, penalty = pen, ratio = 0.5, nlambda = 20)
     for (l in seq_along(f$lambda)) {
       e <- f$eps[, , l]; a <- f$alpha[, l]
@@ -92,4 +104,19 @@ test_that("every training fold contains every study", {
   st <- rep(1:3, c(20, 30, 25)); ev <- rbinom(75, 1, 0.6)
   f <- hmc_folds(st, ev, nfolds = 5, seed = 1)
   for (v in 1:5) expect_equal(length(unique(st[f != v])), 3)
+})
+
+test_that("a single stratum (naive pooling) works and equals the unstratified Cox lasso", {
+  skip_if_not_installed("glmnet")
+  set.seed(6)
+  s <- sim_ipd(K = 3, n = 100, p = 15); d <- s$data; X <- as.matrix(d[, -(1:3)])
+  one <- rep(1L, nrow(d))
+  f <- hmcox(X, d$time, d$status, one, penalty = "lasso", heterogeneity = FALSE,
+             nlambda = 8, tol = 1e-10)
+  g <- glmnet::glmnet(f$data$X, survival::Surv(f$data$time, f$data$status), family = "cox",
+                      lambda = f$lambda, standardize = FALSE, thresh = 1e-13)
+  expect_lt(max(abs(as.matrix(coef(g)) - f$alpha)), 1e-4)
+  cvf <- cv.hmcox(X, d$time, d$status, one, penalty = "MCP", heterogeneity = FALSE,
+                  nfolds = 3, seed = 1, nlambda = 10)
+  expect_equal(nrow(coef(cvf)$eps), 1L)
 })

@@ -177,8 +177,16 @@ sim_ipd <- function(K = 5, n = 200, p = 100, alpha = c(1, -0.8, 0.6, -0.5, 0.4, 
 }
 
 #' Selection and estimation metrics against the truth
+#'
+#' Metrics are reported at three levels: the global support
+#' \eqn{\{j:\alpha_j\neq0\}} (TPR, FDR, F1, MCC, exact recovery, size), the
+#' deviation support \eqn{\{(k,j):\varepsilon_{kj}\neq0\}} (TPR_dev, FDR_dev,
+#' n_dev), and the coefficients themselves (MSE of \eqn{\alpha},
+#' \eqn{\varepsilon} and \eqn{\theta}). \code{err_theta_nc} is the mean absolute
+#' error of \eqn{\hat\theta_{kj}} on near-cancelled cells, i.e. true deviations
+#' with \eqn{|\theta_{kj}|<0.15} although \eqn{\alpha_j\neq0} (NA if none).
 #' @param alpha_hat estimated global effects (p).
-#' @param eps_hat estimated deviations (K x p) or NULL for pooled methods.
+#' @param eps_hat estimated deviations (K x p) or NULL for common-effect methods.
 #' @param truth output of \code{\link{sim_ipd}}.
 #' @return one-row data frame.
 #' @export
@@ -190,7 +198,7 @@ hmc_metrics <- function(alpha_hat, eps_hat, truth) {
   if (is.null(eps_hat)) eps_hat <- matrix(0, K, p)
   theta_hat <- sweep(eps_hat, 2, alpha_hat, "+")
   te <- truth$eps != 0; se <- eps_hat != 0
-  het_cov <- which(colSums(te) > 0)
+  nc <- te & abs(truth$theta) < 0.15
   data.frame(
     TPR = TP / max(sum(act), 1), FDR = if (sum(sel)) FP / sum(sel) else 0,
     F1 = 2 * TP / max(2 * TP + FP + FN, 1),
@@ -198,9 +206,13 @@ hmc_metrics <- function(alpha_hat, eps_hat, truth) {
     exact = as.integer(all(sel == act)), size = sum(sel),
     alpha_bias = mean(abs(alpha_hat[act] - truth$alpha[act])),
     fp_bias = if (sum(!act)) mean(abs(alpha_hat[!act])) else 0,
+    MSE_alpha = mean((alpha_hat - truth$alpha)^2),
+    MSE_eps = mean((eps_hat - truth$eps)^2),
     MSE_theta = mean((theta_hat - truth$theta)^2),
     TPR_dev = if (sum(te)) sum(se & te) / sum(te) else NA_real_,
     FDR_dev = if (sum(se)) sum(se & !te) / sum(se) else 0,
     n_dev = sum(se),
+    n_near_cancel = sum(nc),
+    err_theta_nc = if (sum(nc)) mean(abs(theta_hat[nc] - truth$theta[nc])) else NA_real_,
     hier_violation = sum(colSums(se) > 0 & !sel))
 }

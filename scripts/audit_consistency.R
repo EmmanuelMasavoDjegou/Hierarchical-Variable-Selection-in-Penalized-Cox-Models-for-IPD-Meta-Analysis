@@ -23,17 +23,20 @@ figs <- c("sim_mcc", "sim_fdr_tpr", "sim_mse_theta", "sim_deviations",
           "app_km", "app_cv_surface", "app_forest", "app_stability")
 for (t in tabs) check(paste0("output/tables/", t, ".tex exists"), file.exists(file.path("output/tables", paste0(t, ".tex"))))
 for (f in figs) check(paste0("output/figures/", f, ".png exists"), file.exists(file.path("output/figures", paste0(f, ".png"))))
-raw <- list.files("simulation/results", "^sim_raw_[0-9]{2}_.*csv$", full.names = TRUE)
-check(sprintf("%d scenario result files (13 expected)", length(raw)), length(raw) == length(setup$SCENARIOS))
+raw <- list.files("simulation/results/raw", "^s[0-9]{2}_r[0-9]{3}\\.csv$", full.names = TRUE)
+check(sprintf("%d replicate result files (%d expected)", length(raw), R_PAPER * length(setup$SCENARIOS)),
+      length(raw) == R_PAPER * length(setup$SCENARIOS))
 if (length(raw)) {
   X <- do.call(rbind, lapply(raw, read.csv))
+  check(sprintf("every replicate has all %d methods", length(setup$METHODS)),
+        all(tapply(X$method, paste(X$scenario, X$rep), function(m) length(unique(m))) == length(setup$METHODS)))
   reps <- tapply(X$rep, X$scenario, function(r) length(unique(r)))
   check(sprintf("replicates per scenario: min %d, max %d (R = %d required)", min(reps), max(reps), R_PAPER),
         all(reps == R_PAPER))
   check("no hierarchy violations in any fit", sum(X$hier_violation) == 0)
-  fl <- file.info(c(raw, list.files("output/tables", "^tab_sim", full.names = TRUE)))$mtime
+  st <- list.files("output/tables", "^tab_sim", full.names = TRUE)
   check("simulation tables are newer than the raw results (re-run 02_make_tables_figures.R)",
-        max(fl[seq_along(raw)]) <= min(fl[-seq_along(raw)]))
+        length(st) > 0 && max(file.info(raw)$mtime) <= min(file.info(st)$mtime))
 }
 
 ## ---- manuscript side ---------------------------------------------------------------
@@ -64,6 +67,8 @@ if (length(args)) {
                   if (length(miss)) paste0(" (missing: ", paste(miss, collapse = ", "), ")") else ""),
           length(miss) == 0)
   }
+  ntodo <- length(grab("TODO"))
+  check(sprintf("no TODO comments left (%d remaining)", ntodo), ntodo == 0)
   ntbd <- length(grab("\\\\TBD"))
   check(sprintf("no TBD placeholders left (%d remaining)", ntbd), ntbd == 0)
 }

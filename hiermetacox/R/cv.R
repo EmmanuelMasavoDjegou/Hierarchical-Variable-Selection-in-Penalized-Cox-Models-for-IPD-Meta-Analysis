@@ -42,8 +42,8 @@ hmc_folds <- function(study, status, nfolds = 5, seed = NULL) {
 #'   the selected ratio plus \code{cvm} (nlambda x nratio matrix of CV deviance),
 #'   \code{lambda.min}, \code{ratio.min} and \code{index.min}.
 #' @export
-cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso"),
-                     gamma = switch(penalty, SCAD = 3.7, 3),
+cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso", "enet"),
+                     gamma = switch(penalty, SCAD = 3.7, enet = 0.5, 3),
                      ratio = c(0.5, 1, 2), nfolds = 5, foldid = NULL, seed = NULL,
                      nlambda = 25, lambda.min.ratio = NULL, heterogeneity = TRUE,
                      standardize = TRUE, tol = 1e-5, max.outer = 50,
@@ -52,7 +52,7 @@ cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso")
   if (!heterogeneity) ratio <- 1
   D <- hmc_prepare(X, time, status, study, standardize)
   if (is.null(dfmax)) dfmax <- min(D$p, max(5, floor(sum(D$status) / 3)))
-  lambda <- hmc_lambda_seq(D, nlambda, lambda.min.ratio)
+  lambda <- hmc_lambda_seq(D, nlambda, lambda.min.ratio, if (penalty == "enet") gamma else 1)
   L <- length(lambda); R <- length(ratio)
   if (is.null(foldid)) foldid <- hmc_folds(study, status, nfolds, seed)
   fs <- foldid[D$ord]                                   # sorted order
@@ -73,8 +73,8 @@ cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso")
       f <- hmc_fit_prepared(Dtr, penalty, gamma, ratio[r], lambda,
                             heterogeneity, tol, max.outer, max.inner, dfmax)
       for (l in seq_along(f$lambda)) {
-        th <- sweep(f$eps[, , l, drop = TRUE], 2, f$alpha[, l], "+")
-        if (is.null(dim(th))) th <- matrix(th, nrow = D$K)
+        e_l <- matrix(f$eps[, , l], nrow = D$K)           # keeps K x p when K = 1
+        th <- sweep(e_l, 2, f$alpha[, l], "+")
         eta_cv[te, l, r] <- rowSums(Xte * th[ste, , drop = FALSE])
       }
     }

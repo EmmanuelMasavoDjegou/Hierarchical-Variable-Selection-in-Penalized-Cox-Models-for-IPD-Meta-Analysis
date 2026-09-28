@@ -12,8 +12,6 @@
 suppressPackageStartupMessages({
   library(hiermetacox)
   library(survival)
-  library(glmnet)
-  library(ncvreg)
 })
 
 ## Common tuning settings, stated in Section 3.2 of the manuscript ------------
@@ -42,16 +40,26 @@ SCENARIOS <- list(
 )
 scenario_params <- function(name) modifyList(BASE, SCENARIOS[[name]])
 
-METHODS <- c("MCP-H", "SCAD-H", "LASSO-H", "MCP-S", "MCP-P", "SCAD-P", "LASSO-P", "ENet-P")
+## Full 3 x 4 design: model structure x penalty.
+##   -H hierarchical (proposed structure), -S stratified common effects,
+##   -P naive pooling (unstratified).  Elastic net uses mixing 0.5 throughout.
+METHODS <- c("MCP-H", "SCAD-H", "LASSO-H", "ENet-H",
+             "MCP-S", "SCAD-S", "LASSO-S", "ENet-S",
+             "MCP-P", "SCAD-P", "LASSO-P", "ENet-P")
 METHOD_LABELS <- c(
   "MCP-H"   = "MCP, hierarchical (proposed)",
   "SCAD-H"  = "SCAD, hierarchical (proposed)",
   "LASSO-H" = "Lasso, hierarchical",
+  "ENet-H"  = "Elastic net, hierarchical",
   "MCP-S"   = "MCP, stratified common effects",
+  "SCAD-S"  = "SCAD, stratified common effects",
+  "LASSO-S" = "Lasso, stratified common effects",
+  "ENet-S"  = "Elastic net, stratified common effects",
   "MCP-P"   = "MCP, naive pooling",
   "SCAD-P"  = "SCAD, naive pooling",
   "LASSO-P" = "Lasso, naive pooling",
   "ENet-P"  = "Elastic net, naive pooling")
+ENET_MIX <- 0.5
 
 ## within-study standardisation (applied once, used by every method) ----------
 std_within <- function(X, study) {
@@ -68,10 +76,16 @@ std_within <- function(X, study) {
 ## ("min", "1se"), each list(alpha, eps, extra). The two rules are read off the
 ## same cross-validation run, so they cost nothing extra.
 fit_method <- function(method, X, time, status, study, foldid) {
-  if (method %in% c("MCP-H", "SCAD-H", "LASSO-H", "MCP-S")) {
-    pen <- switch(method, "MCP-H" = "MCP", "SCAD-H" = "SCAD", "LASSO-H" = "lasso", "MCP-S" = "MCP")
-    het <- method != "MCP-S"
-    cvf <- cv.hmcox(X, time, status, study, penalty = pen, heterogeneity = het,
+  ## All twelve methods are fitted by the same solver, grid, CV criterion and
+  ## folds; they differ only in structure and penalty. Naive pooling is the
+  ## common-effect model with a single stratum (one baseline hazard for all).
+  pen <- switch(sub("-(H|S|P)$", "", method),
+                MCP = "MCP", SCAD = "SCAD", LASSO = "lasso", ENet = "enet")
+  structure_ <- sub("^.*-", "", method)
+  het <- structure_ == "H"
+  strata_ <- if (structure_ == "P") rep(1L, length(time)) else study
+  gam <- switch(pen, SCAD = 3.7, enet = ENET_MIX, 3)
+  cvf <- cv.hmcox(X, time, status, strata_, penalty = pen, gamma = gam, heterogeneity = het,
                     ratio = TUNE$ratio, foldid = foldid, nlambda = TUNE$nlambda,
                     lambda.min.ratio = TUNE$lambda.min.ratio, tol = TUNE$tol,
                     dfmax = TUNE$dfmax, standardize = FALSE)
@@ -86,22 +100,5 @@ fit_method <- function(method, X, time, status, study, foldid) {
                                     converged = as.integer(all(sapply(cvf$all.fits, function(f) all(f$converged)))),
                                     halvings = sum(sapply(cvf$all.fits, function(f) sum(f$halvings)))))
     }
-    return(out)
-  }
-  y <- Surv(time, status)
-  ex <- c(ratio = NA, index = NA, boundary = NA, converged = NA, halvings = NA)
-  if (method %in% c("MCP-P", "SCAD-P")) {
-    pen <- sub("-P", "", method)
-    cvn <- cv.ncvsurv(X, y, penalty = pen, fold = foldid, nlambda = 50,
-                      lambda.min = TUNE$lambda.min.ratio, dfmax = TUNE$dfmax, warn = FALSE)
-    i.min <- cvn$min
-    i.1se <- min(which(cvn$cve <= cvn$cve[i.min] + cvn$cvse[i.min]))
-    B <- cvn$fit$beta
-    return(list(min = list(alpha = unname(B[, i.min]), eps = NULL, extra = ex),
-                "1se" = list(alpha = unname(B[, i.1se]), eps = NULL, extra = ex)))
-  }
-  a <- if (method == "LASSO-P") 1 else 0.5
-  cvg <- cv.glmnet(X, y, family = "cox", alpha = a, foldid = foldid, type.measure = "deviance")
-  list(min = list(alpha = as.numeric(coef(cvg, s = "lambda.min")), eps = NULL, extra = ex),
-       "1se" = list(alpha = as.numeric(coef(cvg, s = "lambda.1se")), eps = NULL, extra = ex))
+  out
 }

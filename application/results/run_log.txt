@@ -1,29 +1,33 @@
-MCP-H 18.5 s
-SCAD-H 10.4 s
-LASSO-H 4.6 s
-MCP-S 4.4 s
-MCP-P 12.7 s
-SCAD-P 6.3 s
-LASSO-P 23.8 s
-ENet-P 24.8 s
-   method                          label genes_min genes_1se dev_min dev_1se
-1   MCP-H   MCP, hierarchical (proposed)         6         2       1       0
-2  SCAD-H  SCAD, hierarchical (proposed)         8         7       0       0
-3 LASSO-H            Lasso, hierarchical        42        23       1       0
-4   MCP-S MCP, stratified common effects         4         2      NA      NA
-5   MCP-P             MCP, naive pooling         8         4      NA      NA
-6  SCAD-P            SCAD, naive pooling        35         4      NA      NA
-7 LASSO-P           Lasso, naive pooling        56        11      NA      NA
-8  ENet-P     Elastic net, naive pooling        59        13      NA      NA
-  ratio_1se overlap_with_MCPH seconds
-1         2                 6    18.5
-2         2                 6    10.4
-3         2                 6     4.6
-4         1                 4     4.4
-5        NA                 6    12.7
-6        NA                 6     6.3
-7        NA                 6    23.8
-8        NA                 6    24.8
+MCP-P 8.4 s
+SCAD-P 6.9 s
+LASSO-P 1.8 s
+ENet-P 2.2 s
+    method                                  label genes_min genes_1se dev_min
+1    MCP-H           MCP, hierarchical (proposed)         6         2       1
+2   SCAD-H          SCAD, hierarchical (proposed)         8         7       0
+3  LASSO-H                    Lasso, hierarchical        42        23       1
+4   ENet-H              Elastic net, hierarchical        59        23       3
+5    MCP-S         MCP, stratified common effects         4         2      NA
+6   SCAD-S        SCAD, stratified common effects         8         7      NA
+7  LASSO-S       Lasso, stratified common effects        56        23      NA
+8   ENet-S Elastic net, stratified common effects        60        37      NA
+9    MCP-P                     MCP, naive pooling         5         2      NA
+10  SCAD-P                    SCAD, naive pooling        19         4      NA
+11 LASSO-P                   Lasso, naive pooling        60        21      NA
+12  ENet-P             Elastic net, naive pooling        64        24      NA
+   dev_1se ratio_1se overlap_with_MCPH seconds
+1        0         2                 6    34.2
+2        0         2                 6    18.1
+3        0         2                 6     7.6
+4        0         2                 6     7.3
+5       NA         1                 4     7.8
+6       NA         1                 6     6.3
+7       NA         1                 6     1.7
+8       NA         1                 6     1.8
+9       NA         1                 5     8.4
+10      NA         1                 6     6.9
+11      NA         1                 6     1.8
+12      NA         1                 6     2.2
   covariate alpha_penalized       logHR         SE        HR  HR_lower
 5      GMPR    -0.218343788 -0.19830179 0.03960003 0.8201223 0.7588764
 4     CXCL9    -0.171806107 -0.17937453 0.03835232 0.8357928 0.7752702
@@ -39,12 +43,12 @@ ENet-P 24.8 s
 3 1.2154836 8.613659e-03                   0           0.19  0.0000000
 1 1.1721731 8.529489e-02                   1           0.32  0.0000000
   boot_upper in_1se_model selected_by       p_holm
-5  0.0000000         TRUE           8 3.306482e-06
-4  0.0000000        FALSE           8 1.455373e-05
-2  0.2642023        FALSE           8 4.210137e-04
-6  0.2673735        FALSE           8 9.492913e-03
-3  0.2483646        FALSE           7 1.722732e-02
-1  0.2702412        FALSE           7 8.529489e-02
+5  0.0000000         TRUE          12 3.306482e-06
+4  0.0000000        FALSE          12 1.455373e-05
+2  0.2642023        FALSE          12 4.210137e-04
+6  0.2673735        FALSE          12 9.492913e-03
+3  0.2483646        FALSE          10 1.722732e-02
+1  0.2702412        FALSE          11 8.529489e-02
    gene        stratified           frailty            pooled
 1  GMPR 0.82 (0.76, 0.89) 0.83 (0.76, 0.89) 0.83 (0.77, 0.90)
 2 CXCL9 0.84 (0.78, 0.90) 0.83 (0.77, 0.89) 0.83 (0.77, 0.89)
@@ -64,16 +68,28 @@ LOSO C done
 LOSO D done
 LOSO E done
 LOSO F done
-    method rule         C   n_genes
-1   ENet-P  1se 0.5829176 10.000000
-2  LASSO-P  1se 0.5806318  9.500000
-3    MCP-H  1se 0.5113664  0.500000
-4    MCP-P  1se 0.5393403  1.833333
-5    MCP-S  1se 0.5113664  0.500000
-6   SCAD-H  1se 0.5453112  2.333333
-7   ENet-P  min 0.6036739 42.666667
-8  LASSO-P  min 0.6027129 38.333333
-9    MCP-H  min 0.5612271  4.666667
-10   MCP-P  min 0.5888123  9.833333
-11   MCP-S  min 0.5612271  4.666667
-12  SCAD-H  min 0.5771392  9.166667
+    method rule         C    n_genes
+1   ENet-H  1se 0.5834843 11.8333333
+2   ENet-P  1se 0.5870564 11.0000000
+3   ENet-S  1se 0.5864395 12.6666667
+4  LASSO-H  1se 0.5818159 11.5000000
+5  LASSO-P  1se 0.5848053 10.0000000
+6  LASSO-S  1se 0.5860186 12.0000000
+7    MCP-H  1se 0.5113664  0.5000000
+8    MCP-P  1se 0.5099318  0.6666667
+9    MCP-S  1se 0.5113664  0.5000000
+10  SCAD-H  1se 0.5453112  2.3333333
+11  SCAD-P  1se 0.5214453  1.5000000
+12  SCAD-S  1se 0.5453112  2.3333333
+13  ENet-H  min 0.6011526 47.5000000
+14  ENet-P  min 0.6051127 46.5000000
+15  ENet-S  min 0.6078235 50.6666667
+16 LASSO-H  min 0.5992275 39.6666667
+17 LASSO-P  min 0.6043860 42.1666667
+18 LASSO-S  min 0.6066916 43.5000000
+19   MCP-H  min 0.5612271  4.6666667
+20   MCP-P  min 0.5516192  3.6666667
+21   MCP-S  min 0.5612271  4.6666667
+22  SCAD-H  min 0.5771392  9.1666667
+23  SCAD-P  min 0.5787137 11.8333333
+24  SCAD-S  min 0.5761656  9.1666667

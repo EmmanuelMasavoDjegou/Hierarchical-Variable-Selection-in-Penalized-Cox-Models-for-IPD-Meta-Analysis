@@ -65,10 +65,10 @@ gen <- gen[order(gen$p_value), ]
 writeLines(c("\\begin{tabular}{@{}lrrrrrrcc@{}}", "\\toprule",
   "Gene & $\\exp(\\hat\\alpha_j)$ & HR & 95\\% CI & $p$ & $p_{\\rm Holm}$ & Dev. & Boot. freq. & Methods \\\\",
   "\\midrule",
-  sprintf("%s%s & %s & %s & (%s, %s) & %s & %s & %d & %s & %d/8 \\\\", it(gen$covariate),
+  sprintf("%s%s & %s & %s & (%s, %s) & %s & %s & %d & %s & %d/%d \\\\", it(gen$covariate),
           ifelse(gen$in_1se_model, "$^{\\ast}$", ""), f2(exp(gen$alpha_penalized)), f2(gen$HR),
           f2(gen$HR_lower), f2(gen$HR_upper), pfmt(gen$p_value), pfmt(gen$p_holm),
-          gen$n_deviating_studies, f2(gen$selection_freq), gen$selected_by),
+          gen$n_deviating_studies, f2(gen$selection_freq), gen$selected_by, length(METHODS)),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_genes.tex"))
 
 ## Table 7: frailty sensitivity
@@ -77,29 +77,28 @@ writeLines(c("\\begin{tabular}{@{}llll@{}}", "\\toprule",
   sprintf("%s & %s & %s & %s \\\\", it(fr$gene), fr$stratified, fr$frailty, fr$pooled),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_frailty.tex"))
 
-## Table 8: leave-one-study-out C-index
+## Table 8: leave-one-study-out C-index (rows = methods, columns = held-out cohort)
 lm_ <- aggregate(cbind(C, n_genes) ~ method + rule, lo, mean)
-wide <- function(rule) {
-  d <- lo[lo$rule == rule, ]
-  sapply(unique(lo$method), function(m) sapply(sort(unique(lo$held_out)), function(k)
-    d$C[d$method == m & d$held_out == k]))
-}
-ms <- unique(lo$method)
+studies <- sort(unique(lo$held_out))
 rows <- c()
 for (rule in c("min", "1se")) {
-  W <- wide(rule)
-  rows <- c(rows, sprintf("\\multicolumn{%d}{@{}l}{\\emph{%s}} \\\\", length(ms) + 1,
-                          if (rule == "min") "Minimum rule" else "One-standard-error rule"),
-            sprintf("Study %s held out & %s \\\\", sort(unique(lo$held_out)),
-                    apply(W, 1, function(r) paste(f3(r), collapse = " & "))),
-            sprintf("Mean C & %s \\\\", paste(f3(colMeans(W)), collapse = " & ")),
-            sprintf("Mean no.\\ of genes & %s \\\\", paste(formatC(sapply(ms, function(m)
-              lm_$n_genes[lm_$method == m & lm_$rule == rule]), format = "f", digits = 1), collapse = " & ")))
+  rows <- c(rows, sprintf("\\multicolumn{%d}{@{}l}{\\emph{%s}} \\\\", length(studies) + 3,
+                          if (rule == "min") "Minimum rule" else "One-standard-error rule"))
+  for (m in METHODS) {
+    d <- lo[lo$rule == rule & lo$method == m, ]
+    if (!nrow(d)) next
+    cs <- d$C[match(studies, d$held_out)]
+    rows <- c(rows, sprintf("%s & %s & %s & %s \\\\", METHOD_LABELS[[m]],
+                            paste(f3(cs), collapse = " & "), f3(mean(cs)),
+                            formatC(mean(d$n_genes), format = "f", digits = 1)))
+  }
   if (rule == "min") rows <- c(rows, "\\midrule")
 }
-writeLines(c(sprintf("\\begin{tabular}{@{}l%s@{}}", strrep("r", length(ms))), "\\toprule",
-  sprintf(" & %s \\\\", paste(ms, collapse = " & ")), "\\midrule", rows,
-  "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_loso.tex"))
+writeLines(c(sprintf("\\begin{tabular}{@{}l%s@{}}", strrep("r", length(studies) + 2)), "\\toprule",
+  sprintf("& \\multicolumn{%d}{c}{Held-out cohort} & & \\\\", length(studies)),
+  sprintf("\\cmidrule(lr){2-%d}", length(studies) + 1),
+  sprintf("Method & %s & Mean C & Genes \\\\", paste(studies, collapse = " & ")),
+  "\\midrule", rows, "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_loso.tex"))
 
 ## Figure 5: Kaplan-Meier by cohort
 d <- A$dat

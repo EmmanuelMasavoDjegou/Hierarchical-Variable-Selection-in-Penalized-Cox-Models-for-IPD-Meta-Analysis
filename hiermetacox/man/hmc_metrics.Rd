@@ -9,7 +9,7 @@ hmc_metrics(alpha_hat, eps_hat, truth)
 \arguments{
 \item{alpha_hat}{estimated global effects (p).}
 
-\item{eps_hat}{estimated deviations (K x p) or NULL for pooled methods.}
+\item{eps_hat}{estimated deviations (K x p) or NULL for common-effect methods.}
 
 \item{truth}{output of \code{\link{sim_ipd}}.}
 }
@@ -17,5 +17,11 @@ hmc_metrics(alpha_hat, eps_hat, truth)
 one-row data frame.
 }
 \description{
-Selection and estimation metrics against the truth
+Metrics are reported at three levels: the global support
+\eqn{\{j:\alpha_j\neq0\}} (TPR, FDR, F1, MCC, exact recovery, size), the
+deviation support \eqn{\{(k,j):\varepsilon_{kj}\neq0\}} (TPR_dev, FDR_dev,
+n_dev), and the coefficients themselves (MSE of \eqn{\alpha},
+\eqn{\varepsilon} and \eqn{\theta}). \code{err_theta_nc} is the mean absolute
+error of \eqn{\hat\theta_{kj}} on near-cancelled cells, i.e. true deviations
+with \eqn{|\theta_{kj}|<0.15} although \eqn{\alpha_j\neq0} (NA if none).
 }

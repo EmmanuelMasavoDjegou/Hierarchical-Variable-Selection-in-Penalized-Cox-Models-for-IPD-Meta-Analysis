@@ -11,7 +11,7 @@
 ##            results/table_loso.csv               Table 8  (cross-study validation)
 ##            results/sensitivity_folds.csv        V = 5 vs V = 10 selection
 ##  Seeds   : fold assignment seed 2026; bootstrap seed 7; LOSO seed 11.
-##  Runtime : about 25 minutes on one core.
+##  Runtime : about 45 minutes on one core (12 methods, leave-one-study-out included).
 ################################################################################
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
 source(file.path(here, "..", "simulation", "00_setup.R"))       # TUNE, fit_method, std_within
@@ -22,15 +22,19 @@ X <- std_within(A$X, dat$study); colnames(X) <- genes
 RULE <- "min"   # main model: estimates study-specific effects (Section 3.4); 1-SE reported alongside
 
 ## 1. all eight methods, same folds --------------------------------------------
+## Each step saves its result, and a re-run reuses what is already on disk, so an
+## interruption costs at most one step. Delete results/*.rds to start afresh.
 fid <- hmc_folds(dat$study, dat$status, TUNE$nfolds, seed = 2026)
-fits <- list(); secs <- c()
-for (m in METHODS) {
+f_fits <- file.path(out, "fits.rds")
+F0 <- if (file.exists(f_fits)) readRDS(f_fits) else list(fits = list(), secs = c())
+fits <- F0$fits; secs <- F0$secs
+for (m in setdiff(METHODS, names(fits))) {
   t0 <- proc.time()[3]
   fits[[m]] <- fit_method(m, X, dat$time, dat$status, dat$study, fid)
   secs[m] <- proc.time()[3] - t0
   cat(m, round(secs[m], 1), "s\n")
+  saveRDS(list(fits = fits, secs = secs, foldid = fid), f_fits)
 }
-saveRDS(list(fits = fits, secs = secs, foldid = fid), file.path(out, "fits.rds"))
 
 sel <- function(m, rule) which(fits[[m]][[rule]]$alpha != 0)
 tab_m <- do.call(rbind, lapply(METHODS, function(m) {
@@ -48,7 +52,9 @@ print(tab_m)
 ## 2. inference for the proposed MCP-H fit -------------------------------------
 cvf <- fits[["MCP-H"]][[RULE]]$cv
 inf <- hmcox_inference(cvf, rule = RULE)
-bt <- hmcox_boot(cvf, B = 100, seed = 7, rule = RULE)
+f_boot <- file.path(out, "boot.rds")
+if (file.exists(f_boot)) bt <- readRDS(f_boot) else {
+  bt <- hmcox_boot(cvf, B = 100, seed = 7, rule = RULE); saveRDS(bt, f_boot) }
 g <- merge(inf$global, bt$selection[, c("covariate", "selection_freq", "boot_lower", "boot_upper")],
            by = "covariate", sort = FALSE)
 g$in_1se_model <- g$covariate %in% genes[sel("MCP-H", "1se")]
@@ -77,10 +83,13 @@ writeLines(sprintf("%.4f", theta_fr), file.path(out, "frailty_variance.txt"))
 print(tab_fr); cat("frailty variance:", theta_fr, "\n")
 
 ## 4. number of folds: V = 5 vs V = 10 ----------------------------------------
+f_cv10 <- file.path(out, "cv10.rds")
+if (file.exists(f_cv10)) cv10 <- readRDS(f_cv10) else {
 cv10 <- cv.hmcox(X, dat$time, dat$status, dat$study, penalty = "MCP", ratio = TUNE$ratio,
                  nfolds = 10, seed = 2026, nlambda = TUNE$nlambda,
                  lambda.min.ratio = TUNE$lambda.min.ratio, tol = TUNE$tol,
                  dfmax = TUNE$dfmax, standardize = FALSE)
+saveRDS(cv10, f_cv10) }
 fold_sens <- do.call(rbind, lapply(c("min", "1se"), function(rule) {
   s5 <- genes[sel("MCP-H", rule)]; s10 <- genes[coef(cv10, rule = rule)$alpha != 0]
   data.frame(rule = rule, V = c(5, 10), n_selected = c(length(s5), length(s10)),
@@ -93,18 +102,24 @@ print(fold_sens)
 
 ## 5. leave-one-study-out validation of the global risk score -------------------
 loso <- list()
+ldir <- file.path(out, "loso"); dir.create(ldir, showWarnings = FALSE)
 for (k in unique(dat$study)) {
   tr <- dat$study != k; te <- !tr
   ftr <- hmc_folds(dat$study[tr], dat$status[tr], TUNE$nfolds, seed = 11)
-  for (m in c("MCP-H", "SCAD-H", "MCP-S", "MCP-P", "LASSO-P", "ENet-P")) {
-    ff <- fit_method(m, X[tr, ], dat$time[tr], dat$status[tr], dat$study[tr], ftr)
-    for (rule in c("min", "1se")) {
-      lp <- drop(X[te, , drop = FALSE] %*% ff[[rule]]$alpha)
-      cc <- if (all(lp == 0)) 0.5 else
-        concordance(Surv(dat$time[te], dat$status[te]) ~ lp, reverse = TRUE)$concordance
-      loso[[length(loso) + 1]] <- data.frame(held_out = k, method = m, rule = rule,
-                                             n_genes = sum(ff[[rule]]$alpha != 0), C = cc)
+  for (m in METHODS) {
+    f_km <- file.path(ldir, sprintf("held_out_%s_%s.rds", k, m))   # cache per (cohort, method)
+    if (!file.exists(f_km)) {
+      ff <- fit_method(m, X[tr, ], dat$time[tr], dat$status[tr], dat$study[tr], ftr)
+      res <- lapply(c("min", "1se"), function(rule) {
+        lp <- drop(X[te, , drop = FALSE] %*% ff[[rule]]$alpha)
+        cc <- if (all(lp == 0)) 0.5 else
+          concordance(Surv(dat$time[te], dat$status[te]) ~ lp, reverse = TRUE)$concordance
+        data.frame(held_out = k, method = m, rule = rule,
+                   n_genes = sum(ff[[rule]]$alpha != 0), C = cc)
+      })
+      saveRDS(res, f_km)
     }
+    loso <- c(loso, readRDS(f_km))
   }
   cat("LOSO", k, "done\n")
 }

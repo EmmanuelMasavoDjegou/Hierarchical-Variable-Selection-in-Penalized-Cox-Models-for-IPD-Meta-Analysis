@@ -1,25 +1,35 @@
-\begin{tabular}{@{}lrrrrrr@{}}
+\begin{tabular}{@{}lrrrrrrrr@{}}
 \toprule
- & MCP-H & SCAD-H & MCP-S & MCP-P & LASSO-P & ENet-P \\
+& \multicolumn{6}{c}{Held-out cohort} & & \\
+\cmidrule(lr){2-7}
+Method & A & B & C & D & E & F & Mean C & Genes \\
 \midrule
-\multicolumn{7}{@{}l}{\emph{Minimum rule}} \\
-Study A held out & 0.549 & 0.565 & 0.549 & 0.595 & 0.598 & 0.597 \\
-Study B held out & 0.542 & 0.549 & 0.542 & 0.562 & 0.583 & 0.581 \\
-Study C held out & 0.605 & 0.610 & 0.605 & 0.610 & 0.656 & 0.656 \\
-Study D held out & 0.587 & 0.637 & 0.587 & 0.611 & 0.607 & 0.611 \\
-Study E held out & 0.579 & 0.590 & 0.579 & 0.592 & 0.600 & 0.598 \\
-Study F held out & 0.505 & 0.511 & 0.505 & 0.562 & 0.572 & 0.580 \\
-Mean C & 0.561 & 0.577 & 0.561 & 0.589 & 0.603 & 0.604 \\
-Mean no.\ of genes & 4.7 & 9.2 & 4.7 & 9.8 & 38.3 & 42.7 \\
+\multicolumn{9}{@{}l}{\emph{Minimum rule}} \\
+MCP, hierarchical (proposed) & 0.549 & 0.542 & 0.605 & 0.587 & 0.579 & 0.505 & 0.561 & 4.7 \\
+SCAD, hierarchical (proposed) & 0.565 & 0.549 & 0.610 & 0.637 & 0.590 & 0.511 & 0.577 & 9.2 \\
+Lasso, hierarchical & 0.597 & 0.580 & 0.630 & 0.613 & 0.602 & 0.574 & 0.599 & 39.7 \\
+Elastic net, hierarchical & 0.598 & 0.581 & 0.635 & 0.613 & 0.608 & 0.571 & 0.601 & 47.5 \\
+MCP, stratified common effects & 0.549 & 0.542 & 0.605 & 0.587 & 0.579 & 0.505 & 0.561 & 4.7 \\
+SCAD, stratified common effects & 0.560 & 0.549 & 0.610 & 0.637 & 0.590 & 0.511 & 0.576 & 9.2 \\
+Lasso, stratified common effects & 0.598 & 0.581 & 0.666 & 0.613 & 0.607 & 0.575 & 0.607 & 43.5 \\
+Elastic net, stratified common effects & 0.599 & 0.582 & 0.667 & 0.613 & 0.608 & 0.579 & 0.608 & 50.7 \\
+MCP, naive pooling & 0.543 & 0.550 & 0.596 & 0.589 & 0.522 & 0.509 & 0.552 & 3.7 \\
+SCAD, naive pooling & 0.568 & 0.557 & 0.607 & 0.612 & 0.550 & 0.578 & 0.579 & 11.8 \\
+Lasso, naive pooling & 0.598 & 0.587 & 0.655 & 0.608 & 0.600 & 0.578 & 0.604 & 42.2 \\
+Elastic net, naive pooling & 0.598 & 0.584 & 0.657 & 0.612 & 0.603 & 0.576 & 0.605 & 46.5 \\
 \midrule
-\multicolumn{7}{@{}l}{\emph{One-standard-error rule}} \\
-Study A held out & 0.500 & 0.500 & 0.500 & 0.551 & 0.575 & 0.577 \\
-Study B held out & 0.500 & 0.565 & 0.500 & 0.558 & 0.564 & 0.564 \\
-Study C held out & 0.603 & 0.612 & 0.603 & 0.615 & 0.606 & 0.607 \\
-Study D held out & 0.500 & 0.500 & 0.500 & 0.500 & 0.638 & 0.640 \\
-Study E held out & 0.500 & 0.567 & 0.500 & 0.547 & 0.546 & 0.549 \\
-Study F held out & 0.465 & 0.528 & 0.465 & 0.465 & 0.555 & 0.561 \\
-Mean C & 0.511 & 0.545 & 0.511 & 0.539 & 0.581 & 0.583 \\
-Mean no.\ of genes & 0.5 & 2.3 & 0.5 & 1.8 & 9.5 & 10.0 \\
+\multicolumn{9}{@{}l}{\emph{One-standard-error rule}} \\
+MCP, hierarchical (proposed) & 0.500 & 0.500 & 0.603 & 0.500 & 0.500 & 0.465 & 0.511 & 0.5 \\
+SCAD, hierarchical (proposed) & 0.500 & 0.565 & 0.612 & 0.500 & 0.567 & 0.528 & 0.545 & 2.3 \\
+Lasso, hierarchical & 0.555 & 0.554 & 0.612 & 0.639 & 0.561 & 0.570 & 0.582 & 11.5 \\
+Elastic net, hierarchical & 0.569 & 0.555 & 0.610 & 0.641 & 0.559 & 0.567 & 0.583 & 11.8 \\
+MCP, stratified common effects & 0.500 & 0.500 & 0.603 & 0.500 & 0.500 & 0.465 & 0.511 & 0.5 \\
+SCAD, stratified common effects & 0.500 & 0.565 & 0.612 & 0.500 & 0.567 & 0.528 & 0.545 & 2.3 \\
+Lasso, stratified common effects & 0.568 & 0.554 & 0.625 & 0.639 & 0.561 & 0.570 & 0.586 & 12.0 \\
+Elastic net, stratified common effects & 0.569 & 0.555 & 0.628 & 0.641 & 0.559 & 0.567 & 0.586 & 12.7 \\
+MCP, naive pooling & 0.500 & 0.500 & 0.595 & 0.500 & 0.500 & 0.465 & 0.510 & 0.7 \\
+SCAD, naive pooling & 0.500 & 0.500 & 0.604 & 0.500 & 0.500 & 0.525 & 0.521 & 1.5 \\
+Lasso, naive pooling & 0.568 & 0.562 & 0.620 & 0.638 & 0.550 & 0.570 & 0.585 & 10.0 \\
+Elastic net, naive pooling & 0.568 & 0.562 & 0.631 & 0.639 & 0.553 & 0.570 & 0.587 & 11.0 \\
 \bottomrule
 \end{tabular}

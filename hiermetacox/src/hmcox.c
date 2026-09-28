@@ -11,6 +11,10 @@
  *   eta_i  = sum_j x_ij * (alpha_j + eps~_{k(i) j} / omega_k),
  *   omega_k = sqrt(n_k / N)  (standardisation of the study-specific columns).
  *
+ * Penalty codes: 0 lasso, 1 MCP, 2 SCAD, 3 elastic net. For the elastic net the
+ * argument gamma carries the mixing parameter a, and the penalty is
+ * lambda * (a|b| + (1 - a) b^2 / 2), as in glmnet.
+ *
  * Rows of X must be sorted by study and, within study, by follow-up time.
  * Each outer iteration builds the diagonal quadratic surrogate of L at the
  * current eta (h_i = haz_i * A_i / N, Simon et al. 2011; Breheny & Huang 2011),
@@ -31,6 +35,8 @@ static double pen_val(double b, double lam, double gam, int type) {
   double a = fabs(b);
   if (lam <= 0 || a == 0) return 0.0;
   if (type == 0) return lam * a;                                 /* lasso */
+  if (type == 3)                         /* elastic net; gam = mixing a in (0,1] */
+    return lam * (gam * a + 0.5 * (1.0 - gam) * a * a);
   if (type == 1)                                                 /* MCP   */
     return (a <= gam * lam) ? lam * a - a * a / (2.0 * gam) : 0.5 * gam * lam * lam;
   /* SCAD */
@@ -49,6 +55,10 @@ static double pen_min(double z, double v, double lam, double gam, int type) {
   double s = sgn(z), vz = v * fabs(z);
   cand[nc++] = 0.0;
   cand[nc++] = z;
+  if (type == 3) {                 /* elastic net: convex, closed form */
+    double l1 = lam * gam, l2 = lam * (1.0 - gam);
+    return (vz > l1) ? s * (vz - l1) / (v + l2) : 0.0;
+  }
   if (type == 0) {
     cand[nc++] = (vz > lam) ? s * (vz - lam) / v : 0.0;
   } else if (type == 1) {
@@ -226,7 +236,9 @@ static double block_update(coxdat *D, int j, double *a, double *e, double *h,
        hence the likelihood unchanged; choose c to minimise the penalty. The
        penalty is concave (MCP/SCAD) or linear (lasso) in c between the
        breakpoints c = eps_kj, so the minimum is attained at a breakpoint.
-       c = -alpha_j is excluded because it would violate the hierarchy.
+       c = -alpha_j is excluded because it would violate the hierarchy. For the
+       convex elastic net the minimum over c may lie between breakpoints; the
+       move is then a descent step (accepted only if it lowers the penalty).
        If all K deviations are nonzero, the best breakpoint is taken even if it
        does not lower the penalty: the identification rule requires at least
        one study to share alpha_j (otherwise alpha_j and eps_.j are not

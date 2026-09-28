@@ -62,6 +62,11 @@ The sharing rule replaces the zero-sum constraint of the first version of the
 paper, which is incompatible with sparse deviations (one deviating study would
 force all others to deviate).
 
+**Penalties.** `penalty = "MCP"` (default), `"SCAD"`, `"lasso"` or `"enet"`
+(elastic net, `lambda * (a|b| + (1 - a) b^2 / 2)` with mixing `a = gamma`,
+default 0.5, as in `glmnet`). `heterogeneity = FALSE` fits the stratified model
+with common effects.
+
 **Algorithm.** Pathwise coordinate descent on the diagonal quadratic surrogate of
 the stratified partial likelihood, written in C. Each covariate block
 `(alpha_j, eps_1j, ..., eps_Kj)` is updated by exact one-dimensional minimisation
@@ -100,7 +105,7 @@ returned from the same run.
 │
 ├── application/                    # Section 6
 │   ├── 01_prepare_data.R             curatedOvarianData -> analysis data (p = 500)
-│   ├── 02_fit_and_infer.R            8 methods, inference, bootstrap, frailty,
+│   ├── 02_fit_and_infer.R            12 methods, inference, bootstrap, frailty,
 │   │                                 fold sensitivity, leave-one-study-out validation
 │   ├── 03_make_tables_figures.R      tables and figures from stored results
 │   └── results/                      CSV/RDS outputs and logs
@@ -180,13 +185,13 @@ or, from R, `remotes::install_github("EmmanuelMasavoDjegou/Hierarchical-Variable
 The package itself depends only on `survival`. The reproduction scripts also use:
 
 ```r
-install.packages(c("glmnet", "ncvreg", "ggplot2", "testthat"))
+install.packages(c("ggplot2", "testthat", "glmnet"))   # glmnet: package tests only
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 BiocManager::install(c("Biobase", "curatedOvarianData"))
 ```
 
-Results in the paper were produced with R 4.3.3, survival 3.5-8, glmnet 4.1-8 and
-ncvreg 3.16.0.
+Results in the paper were produced with R 4.3.3 and survival 3.5-8; glmnet 4.1-8
+is used only to verify the solver in the package tests.
 
 ### Quick start
 
@@ -220,7 +225,8 @@ plausibility:
 * with no penalty, the common-effect fit equals `survival::coxph(... + strata(study))`
   with Breslow ties, coefficients and log-likelihood;
 * with no penalty, the heterogeneous fit equals `K` separate Cox fits;
-* the lasso path equals `glmnet`'s stratified Cox path;
+* the lasso and elastic-net paths equal `glmnet`'s stratified Cox paths, and a
+  single-stratum fit equals `glmnet`'s ordinary (unstratified) Cox lasso;
 * MCP and SCAD solutions satisfy the Karush–Kuhn–Tucker conditions;
 * every fitted model satisfies the hierarchy and the sharing rule at every
   `lambda`, and every training fold contains every study.
@@ -236,27 +242,34 @@ through the same code paths as the full study.
 
 ```bash
 cd simulation
-./run_all.sh                         # 13 scenarios x 8 methods, R = 50 replicates
+NCORES=8 ./run_all.sh                # 13 scenarios x 12 methods, R = 50 replicates
 Rscript 02_make_tables_figures.R     # Tables 1-3, A1 and Figures 1-4 -> output/
 ```
 
-**About 2.5 hours on one core for R = 50.** Each replicate is appended to
-`results/sim_raw_<scenario>.csv` as soon as it finishes, and the runner skips
-replicates already on disk, so the run is resumable: re-issue the same command
-after any interruption. The repository ships replicates 1-25 of every scenario;
-because every replicate has its own fixed seed, `./run_all.sh` only computes
-replicates 26-50. Delete `results/sim_raw_*.csv` and `results/sim_coverage_*.csv`
-to recompute everything from scratch in your own environment. Replicate `r` of scenario `s` uses
-`set.seed(20260000 + 1000 * s + r)`, so any single replicate can be regenerated
-in isolation. `02_make_tables_figures.R` refits nothing and reports the number of
-replicates per scenario it found.
+**About 7 hours on one core for R = 50; divide by `NCORES`** (parallel runs use
+`parallel::mclapply`, available on Linux and macOS). The 12 methods form a full
+3 x 4 design: {hierarchical, stratified common effects, naive pooling} x {MCP,
+SCAD, lasso, elastic net}. All twelve are fitted by the same `hiermetacox` solver,
+tuning grid, cross-validation criterion and folds; naive pooling is the
+common-effect model with a single stratum. Each replicate is written to its own
+file, `results/raw/sXX_rYYY.csv` (metrics) and `sXX_rYYY_cov.csv` (Wald-interval
+checks), atomically, so the run is resumable and parallel-safe: re-issue the same
+command after any interruption and completed replicates are skipped. Replicate `r`
+of scenario `s` uses `set.seed(20260000 + 1000 * s + r)`, so any single replicate
+can be regenerated in isolation. `02_make_tables_figures.R` refits nothing; it
+aggregates `results/raw/` and reports the number of replicates per scenario.
+
+Metrics are recorded at three levels: global support (TPR, FDR, MCC, exact
+recovery), deviation support (TPR and FDR of the nonzero deviations), and
+coefficients (MSE of alpha, epsilon and theta, plus the error of theta in
+near-cancelled cells where a deviation almost cancels the global effect).
 
 ### Real data (Section 6)
 
 ```bash
 cd application
 Rscript 01_prepare_data.R            # Table 4 data, p = 500 genes
-Rscript 02_fit_and_infer.R           # all fits, inference, validation (~15 min)
+Rscript 02_fit_and_infer.R           # all fits, inference, validation (~45 min)
 Rscript 03_make_tables_figures.R     # Tables 4-8 and Figures 5-8 -> output/
 ```
 
@@ -329,11 +342,12 @@ Rscript scripts/audit_consistency.R ~/overleaf/main.tex     # + your manuscript 
 ```
 
 The code-side checks confirm that every table and figure exists in `output/`,
-that every scenario has exactly R = 50 replicates, that no fit violates the
+that every scenario has exactly R = 50 replicates with all 12 methods, that no fit violates the
 hierarchy, and that the tables are newer than the raw results. Given a path to
 `main.tex` (with `references.bib` next to it), it also checks that every
 `\includegraphics` file is produced in `output/figures/` and every produced figure
-is used, that the tuning constants and design stated in the manuscript (folds,
+is used, that no `\TBD` placeholder or `TODO` comment remains, that the tuning
+constants and design stated in the manuscript (folds,
 ratio grid, grid length, `kappa`, `d_max`, `K`, `n_k`, `p`, `R`) equal those in
 `simulation/00_setup.R`, that every citation resolves, and that no `\TBD`
 placeholder remains.

@@ -87,14 +87,14 @@ hmc_loss <- function(D, eta, score = FALSE) {
   if (score) list(loss = res[[1]], score = res[[2]]) else res[[1]]
 }
 
-pen_code <- function(penalty) switch(penalty, lasso = 0L, MCP = 1L, SCAD = 2L,
-                                     stop("penalty must be MCP, SCAD or lasso"))
+pen_code <- function(penalty) switch(penalty, lasso = 0L, MCP = 1L, SCAD = 2L, enet = 3L,
+                                     stop("penalty must be MCP, SCAD, lasso or enet"))
 
 #' Lambda sequence for the global effects
 #' @keywords internal
-hmc_lambda_seq <- function(D, nlambda = 25, lambda.min.ratio = NULL) {
+hmc_lambda_seq <- function(D, nlambda = 25, lambda.min.ratio = NULL, l1 = 1) {
   sc <- hmc_loss(D, rep(0, D$N), score = TRUE)$score
-  lmax <- max(abs(sc)) * 1.0001
+  lmax <- max(abs(sc)) / l1 * 1.0001   # l1 = elastic-net mixing (1 otherwise)
   if (is.null(lambda.min.ratio)) lambda.min.ratio <- if (D$N > D$p) 0.05 else 0.10
   exp(seq(log(lmax), log(lmax * lambda.min.ratio), length.out = nlambda))
 }
@@ -136,8 +136,10 @@ hmc_fit_prepared <- function(D, penalty, gamma, ratio, lambda, heterogeneity,
 #' @param X numeric covariate matrix (N x p).
 #' @param time,status follow-up time and event indicator (1 = event).
 #' @param study study (stratum) membership, length N.
-#' @param penalty "MCP" (default), "SCAD" or "lasso".
-#' @param gamma concavity parameter (default 3 for MCP, 3.7 for SCAD).
+#' @param penalty "MCP" (default), "SCAD", "lasso" or "enet" (elastic net,
+#'   penalty \eqn{\lambda\{a|b|+(1-a)b^2/2\}} as in glmnet).
+#' @param gamma concavity parameter (default 3 for MCP, 3.7 for SCAD); for
+#'   \code{penalty = "enet"} it is the mixing parameter \eqn{a} (default 0.5).
 #' @param ratio \eqn{\lambda_\varepsilon/\lambda_\alpha}.
 #' @param lambda optional decreasing sequence of \eqn{\lambda_\alpha}.
 #' @param nlambda,lambda.min.ratio path length and smallest/largest ratio.
@@ -149,15 +151,17 @@ hmc_fit_prepared <- function(D, penalty, gamma, ratio, lambda, heterogeneity,
 #' @param dfmax stop the path once more than dfmax global effects are active.
 #' @return An object of class \code{"hmcox"}.
 #' @export
-hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso"),
-                  gamma = switch(penalty, SCAD = 3.7, 3), ratio = 1,
+hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso", "enet"),
+                  gamma = switch(penalty, SCAD = 3.7, enet = 0.5, 3), ratio = 1,
                   lambda = NULL, nlambda = 25, lambda.min.ratio = NULL,
                   heterogeneity = TRUE, standardize = TRUE, tol = 1e-5,
                   max.outer = 50, max.inner = 2000, dfmax = NULL) {
   penalty <- match.arg(penalty)
   D <- hmc_prepare(X, time, status, study, standardize)
   if (is.null(dfmax)) dfmax <- min(D$p, max(5, floor(sum(D$status) / 3)))
-  if (is.null(lambda)) lambda <- hmc_lambda_seq(D, nlambda, lambda.min.ratio)
+  if (penalty == "enet" && !(gamma > 0 && gamma <= 1)) stop("for enet, gamma is the mixing parameter in (0, 1]")
+  if (is.null(lambda)) lambda <- hmc_lambda_seq(D, nlambda, lambda.min.ratio,
+                                                if (penalty == "enet") gamma else 1)
   fit <- hmc_fit_prepared(D, penalty, gamma, ratio, lambda, heterogeneity,
                           tol, max.outer, max.inner, dfmax)
   structure(c(fit, list(penalty = penalty, gamma = gamma, ratio = ratio,
