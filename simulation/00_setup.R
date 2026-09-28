@@ -98,7 +98,9 @@ fit_method <- function(method, X, time, status, study, foldid) {
                           extra = c(ratio = cf$ratio, index = ix[1],
                                     boundary = as.integer(ix[1] == length(cvf$lambda.grid)),
                                     converged = as.integer(all(sapply(cvf$all.fits, function(f) all(f$converged)))),
-                                    halvings = sum(sapply(cvf$all.fits, function(f) sum(f$halvings)))))
+                                    halvings = sum(sapply(cvf$all.fits, function(f) sum(f$halvings))),
+                                    stalled = sum(sapply(cvf$all.fits, function(f) sum(f$status == 2))),
+                                    iter_limit = sum(sapply(cvf$all.fits, function(f) sum(f$status == 0)))))
     }
   out
 }

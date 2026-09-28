@@ -452,7 +452,7 @@ SEXP hmc_path(SEXP X_, SEXP d_, SEXP sstart_, SEXP tfirst_, SEXP tlast_,
           memcpy(e, e_old, (size_t)K * p * sizeof(double));
           compute_eta(&D, a, e, eta);
           loss = cox_irls(&D, eta, NULL, NULL);
-          conv = 1;
+          conv = 2;                    /* stalled: no halved step accepted */
           break;
         }
       }

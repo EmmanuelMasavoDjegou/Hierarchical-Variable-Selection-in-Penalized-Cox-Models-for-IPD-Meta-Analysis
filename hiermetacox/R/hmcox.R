@@ -134,7 +134,8 @@ hmc_fit_prepared <- function(D, penalty, gamma, ratio, lambda, heterogeneity,
   keep <- !is.na(alpha[1, ])
   list(alpha = alpha[, keep, drop = FALSE], eps = eps[, , keep, drop = FALSE],
        lambda = lambda[keep], loss = res[[3]][keep], objective = res[[4]][keep],
-       iter = res[[5]][keep], converged = as.logical(res[[6]][keep]),
+       iter = res[[5]][keep], converged = res[[6]][keep] > 0,
+       status = res[[6]][keep],   # 1 tolerance met, 2 no halved step accepted, 0 iteration limit
        halvings = res[[7]][keep])
 }
 
