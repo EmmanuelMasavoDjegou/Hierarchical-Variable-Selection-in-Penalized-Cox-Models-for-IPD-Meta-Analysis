@@ -120,3 +120,12 @@ test_that("a single stratum (naive pooling) works and equals the unstratified Co
                   nfolds = 3, seed = 1, nlambda = 10)
   expect_equal(nrow(coef(cvf)$eps), 1L)
 })
+
+test_that("the CV criterion is exactly the sum of its fold-level scores", {
+  set.seed(7)
+  s <- sim_ipd(K = 4, n = 120, p = 20); d <- s$data; X <- as.matrix(d[, -(1:3)])
+  f <- hmcox(X, d$time, d$status, d$study, nlambda = 5)
+  D <- f$data; th <- coef(f, 3)$theta; eta <- rowSums(D$X * th[D$sid, ])
+  expect_equal(sum(hiermetacox:::hmc_dev_terms(D, eta)),
+               2 * D$N * hiermetacox:::hmc_loss(D, eta), tolerance = 1e-10)
+})

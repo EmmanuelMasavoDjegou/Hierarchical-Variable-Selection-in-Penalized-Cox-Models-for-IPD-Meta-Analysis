@@ -87,6 +87,22 @@ hmc_loss <- function(D, eta, score = FALSE) {
   if (score) list(loss = res[[1]], score = res[[2]]) else res[[1]]
 }
 
+## per-observation contributions to the stratified partial-likelihood deviance,
+## -2 * delta_i * (eta_i - log sum_{l in R_k(Y_i)} exp(eta_l)), in the sorted order
+## of D (Breslow ties: the risk set of a tied time includes all tied subjects).
+## Their sum is 2 * N * hmc_loss(D, eta).
+hmc_dev_terms <- function(D, eta) {
+  out <- numeric(D$N)
+  for (k in seq_len(D$K)) {
+    rows <- (D$sstart[k] + 1):D$sstart[k + 1]
+    e <- eta[rows]; m <- max(e); hz <- exp(e - m)
+    R <- rev(cumsum(rev(hz)))
+    rsk <- R[D$tfirst[rows] - D$sstart[k] + 1]
+    out[rows] <- -2 * D$status[rows] * (e - m - log(rsk))
+  }
+  out
+}
+
 pen_code <- function(penalty) switch(penalty, lasso = 0L, MCP = 1L, SCAD = 2L, enet = 3L,
                                      stop("penalty must be MCP, SCAD, lasso or enet"))
 

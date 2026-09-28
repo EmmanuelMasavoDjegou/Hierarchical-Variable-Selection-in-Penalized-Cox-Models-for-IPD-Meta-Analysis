@@ -79,17 +79,25 @@ cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso",
       }
     }
   }
+  ## CV criterion and its standard error use the same fold-level quantity.
+  ## c_i: deviance contribution of participant i from out-of-fold linear
+  ## predictors and full-data within-study risk sets; D_v(lambda) = sum of c_i
+  ## over fold v, so that CV = sum_v D_v. The fold score used for both the
+  ## criterion and its SE is the deviance reduction relative to the null model,
+  ## Delta_v(lambda) = D_v(lambda) - D_v(null); sum_v Delta_v = CV - CV(null),
+  ## which has the same minimiser as CV, and SE = sqrt(V) * sd(Delta_v), the
+  ## standard error of a sum of V fold scores. Centring at the null model removes
+  ## the baseline risk-set terms, which are common to all models.
   cvm <- matrix(NA_real_, L, R, dimnames = list(NULL, paste0("ratio=", ratio)))
   cvsd <- cvm
   fl <- sort(unique(fs))
-  Dfold <- lapply(fl, function(v) hmc_subset(D, fs == v))
+  D0v <- vapply(fl, function(v) sum(hmc_dev_terms(D, rep(0, D$N))[fs == v]), 0)
   for (r in seq_len(R)) for (l in seq_len(L)) {
     if (anyNA(eta_cv[, l, r])) next
-    cvm[l, r] <- 2 * D$N * hmc_loss(D, eta_cv[, l, r])
-    ## fold-level contributions for a 1-SE rule (basic approach approximation)
-    dv <- vapply(seq_along(fl), function(i)
-      2 * Dfold[[i]]$N * hmc_loss(Dfold[[i]], eta_cv[fs == fl[i], l, r]), 0)
-    cvsd[l, r] <- sd(dv) * sqrt(V)
+    ci <- hmc_dev_terms(D, eta_cv[, l, r])
+    Dv <- vapply(fl, function(v) sum(ci[fs == v]), 0)
+    cvm[l, r] <- sum(Dv)
+    cvsd[l, r] <- sqrt(V) * sd(Dv - D0v)
   }
   dfm <- matrix(NA_real_, L, R)
   for (r in seq_len(R)) {

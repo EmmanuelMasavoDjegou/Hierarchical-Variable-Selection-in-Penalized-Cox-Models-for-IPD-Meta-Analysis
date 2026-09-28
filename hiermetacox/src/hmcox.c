@@ -94,7 +94,7 @@ typedef struct {
   int N, p, K;
   const double *X, *d, *omega;
   const int *sstart, *tfirst, *tlast, *sid;
-  double *haz, *R, *C, *rsk, *A, *buf;
+  double *haz, *R, *C, *rsk, *A, *buf, *buf2;
 } coxdat;
 
 /* negative log partial likelihood / N ; optionally fills h and r */
@@ -208,14 +208,15 @@ static double block_update(coxdat *D, int j, double *a, double *e, double *h,
     maxch = fabs(shift) * sqrt(v);
   }
   if (het && a[j] != 0) {
+    /* The block after step (a) is feasible (the deviations were feasible
+       before and alpha_j != 0). Save it: the deviation update below is
+       accepted only if it does not increase the penalised surrogate. */
+    double a_old = a[j], *e_old = D->buf2, *raw = D->buf;
+    for (int k = 0; k < K; k++) e_old[k] = e[k + (size_t)K * j];
+    double mc_dev = 0.0;
+
+    /* step (c): exact, unconstrained coordinate update of every deviation */
     for (int k = 0; k < K; k++) {
-      /* sharing rule as a hard constraint: the last study that shares
-         alpha_j keeps a zero deviation */
-      if (e[k + (size_t)K * j] == 0) {
-        int nzero = 0;
-        for (int kk = 0; kk < K; kk++) if (e[kk + (size_t)K * j] == 0) nzero++;
-        if (nzero <= 1) continue;
-      }
       int s0 = D->sstart[k], s1 = D->sstart[k + 1];
       double om = D->omega[k];
       double wr = 0.0, wx = 0.0;
@@ -229,45 +230,67 @@ static double block_update(coxdat *D, int j, double *a, double *e, double *h,
         double c = sh / om;
         for (int i = s0; i < s1; i++) { double si = c * x[i]; r[i] -= si; eta[i] += si; }
         e[idx] = enew;
-        if (fabs(sh) * sqrt(wx) > maxch) maxch = fabs(sh) * sqrt(wx);
+        if (fabs(sh) * sqrt(wx) > mc_dev) mc_dev = fabs(sh) * sqrt(wx);
       }
     }
-    /* Re-centering move: (alpha_j + c, eps_kj - c) leaves every theta_kj and
-       hence the likelihood unchanged; choose c to minimise the penalty. The
-       penalty is concave (MCP/SCAD) or linear (lasso) in c between the
-       breakpoints c = eps_kj, so the minimum is attained at a breakpoint.
-       c = -alpha_j is excluded because it would violate the hierarchy. For the
-       convex elastic net the minimum over c may lie between breakpoints; the
-       move is then a descent step (accepted only if it lowers the penalty).
-       If all K deviations are nonzero, the best breakpoint is taken even if it
-       does not lower the penalty: the identification rule requires at least
-       one study to share alpha_j (otherwise alpha_j and eps_.j are not
-       separately identified and the refit design is singular). */
-    int nnz = 0;
-    for (int k = 0; k < K; k++) if (e[k + (size_t)K * j] != 0) nnz++;
-    if (nnz > 0) {
-      double best_c = 0.0, best_p = pen_val(a[j], lamA, gam, type);
-      double *orig = D->buf;
-      int KK = K;
-      for (int k = 0; k < KK; k++) {
-        orig[k] = e[k + (size_t)K * j] / D->omega[k];      /* raw scale */
-        best_p += pen_val(e[k + (size_t)K * j], lamE, gam, type);
-      }
-      for (int c0 = 0; c0 < KK; c0++) {
-        double c = orig[c0];
-        if (c == 0 || a[j] + c == 0) continue;
+
+    /* step (d): exact minimisation of the penalty over the feasible
+       representations of the current theta_.j. A representation is
+       (alpha_j + c, eps_kj - c); it satisfies the sharing constraint iff
+       c equals the (raw-scale) deviation of some study, and the hierarchy
+       iff alpha_j + c != 0 unless every theta_kj is zero. The feasible set
+       is therefore finite and is enumerated completely; ties are broken by
+       the smallest study index, which does not change the objective. */
+    int all_zero_theta = 1;
+    for (int k = 0; k < K; k++) {
+      raw[k] = e[k + (size_t)K * j] / D->omega[k];
+      if (a[j] + raw[k] != 0) all_zero_theta = 0;
+    }
+    if (all_zero_theta) {                 /* theta_.j = 0: the zero block */
+      a[j] = 0.0;
+      for (int k = 0; k < K; k++) e[k + (size_t)K * j] = 0.0;
+    } else {
+      double best_p = R_PosInf, best_c = 0.0;
+      for (int c0 = 0; c0 < K; c0++) {
+        double c = raw[c0];
+        if (a[j] + c == 0) continue;      /* would violate the hierarchy */
         double pv = pen_val(a[j] + c, lamA, gam, type);
-        for (int k = 0; k < KK; k++) pv += pen_val(D->omega[k] * (orig[k] - c), lamE, gam, type);
-        if (pv < best_p - 1e-14 || (nnz == K && best_c == 0)) { best_p = pv; best_c = c; }  /* forced only if infeasible */
+        for (int k = 0; k < K; k++) pv += pen_val(D->omega[k] * (raw[k] - c), lamE, gam, type);
+        if (pv < best_p - 1e-14) { best_p = pv; best_c = c; }
       }
-      if (best_c != 0) {
+      if (best_p < R_PosInf) {
         a[j] += best_c;
-        for (int k = 0; k < K; k++) {
-          e[k + (size_t)K * j] = D->omega[k] * (orig[k] - best_c);
-        }
-        for (int k = 0; k < K; k++) if (orig[k] == best_c) e[k + (size_t)K * j] = 0.0;
-        if (fabs(best_c) * sqrt(v) > maxch) maxch = fabs(best_c) * sqrt(v);
+        for (int k = 0; k < K; k++)
+          e[k + (size_t)K * j] = (raw[k] == best_c) ? 0.0 : D->omega[k] * (raw[k] - best_c);
       }
+    }
+
+    /* acceptance: surrogate change of the block relative to the saved one */
+    double dq = 0.0, dp = 0.0;
+    dp += pen_val(a[j], lamA, gam, type) - pen_val(a_old, lamA, gam, type);
+    for (int k = 0; k < K; k++) {
+      double en = e[k + (size_t)K * j], eo = e_old[k];
+      dp += pen_val(en, lamE, gam, type) - pen_val(eo, lamE, gam, type);
+      double dth = (a[j] - a_old) + (en - eo) / D->omega[k];   /* theta_new - theta_old */
+      if (dth == 0) continue;
+      for (int i = D->sstart[k]; i < D->sstart[k + 1]; i++) {
+        double rold = r[i] + x[i] * dth;
+        dq += 0.5 * h[i] * (r[i] * r[i] - rold * rold);
+      }
+    }
+    if (dq + dp > 1e-12) {                /* worse: revert to the saved block */
+      for (int k = 0; k < K; k++) {
+        double dth = (a[j] - a_old) + (e[k + (size_t)K * j] - e_old[k]) / D->omega[k];
+        if (dth != 0)
+          for (int i = D->sstart[k]; i < D->sstart[k + 1]; i++) {
+            r[i] += x[i] * dth; eta[i] -= x[i] * dth;
+          }
+        e[k + (size_t)K * j] = e_old[k];
+      }
+      a[j] = a_old;
+    } else {
+      if (mc_dev > maxch) maxch = mc_dev;
+      if (fabs(a[j] - a_old) * sqrt(v) > maxch) maxch = fabs(a[j] - a_old) * sqrt(v);
     }
   }
   return maxch;
@@ -304,6 +327,9 @@ static void project_share(coxdat *D, double *a, double *e, double lamA, double l
       a[j] += best_c;
       for (int k = 0; k < K; k++)
         e[k + (size_t)K * j] = (orig[k] == best_c) ? 0.0 : D->omega[k] * (orig[k] - best_c);
+    } else {                           /* every theta_kj is zero: zero block */
+      a[j] = 0.0;
+      for (int k = 0; k < K; k++) e[k + (size_t)K * j] = 0.0;
     }
   }
 }
@@ -335,6 +361,7 @@ SEXP hmc_path(SEXP X_, SEXP d_, SEXP sstart_, SEXP tfirst_, SEXP tlast_,
   D.rsk = (double *)R_alloc(N, sizeof(double));
   D.A = (double *)R_alloc(N, sizeof(double));
   D.buf = (double *)R_alloc(K, sizeof(double));
+  D.buf2 = (double *)R_alloc(K, sizeof(double));
 
   double *a = (double *)R_alloc(p, sizeof(double));
   double *e = (double *)R_alloc((size_t)K * p, sizeof(double));

@@ -78,9 +78,13 @@ only if the true objective does not increase (step-halving otherwise).
 cross-validation over 20 values of `lambda_alpha` times the ratios
 `lambda_eps / lambda_alpha` in `{0.5, 1, 2}`. Folds are stratified by study and
 event status; the criterion is the cross-validated linear-predictor deviance of
-the stratified partial likelihood (Dai & Breheny, 2019). Both the minimum rule
-and a one-standard-error rule (fewest nonzero parameters within one SE) are
-returned from the same run.
+the stratified partial likelihood (Dai & Breheny, 2019), computed from
+out-of-fold linear predictors and full-data within-study risk sets. Its standard
+error uses the same fold-level quantity: the fold's deviance reduction relative to
+the null model, `Delta_v = D_v - D_v(null)`, with `SE = sqrt(V) * sd(Delta_v)`
+(centring removes the baseline risk-set terms, which are common to all models).
+Both the minimum rule and a one-standard-error rule (fewest nonzero parameters
+within one SE) are returned from the same run.
 
 ---
 
@@ -304,10 +308,11 @@ each covariate within each study by default, so `exp(alpha_j)` is a hazard ratio
 per one-SD increase in the study's own distribution. This removes platform and
 batch scale differences between cohorts, which is why it is the default.
 
-**Which tuning rule.** Use `rule = "1se"` when the goal is a short list of
-covariates, and `rule = "min"` when the goal is estimating study-specific effects
-or prediction. The simulation supports this split; in the ovarian data the two
-rules give 2 and 6 genes respectively. Both rules come from one CV run
+**Which tuning rule.** The two rules target different aims (a short list of
+covariates versus accurate study-specific estimates), and the simulation study of
+the paper compares them; its findings apply to designs like ours rather than as a
+general rule, so we recommend reporting both. In the ovarian data the two rules
+give 2 and 6 genes respectively. Both rules come from one CV run
 (`coef(fit, rule = "min")`, `coef(fit, rule = "1se")`).
 
 **Wald intervals are conditional on the selected model.** `hmcox_inference()`
