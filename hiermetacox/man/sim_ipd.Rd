@@ -15,7 +15,9 @@ sim_ipd(
   n.dev = 2,
   sd.eps = 0.4,
   shape = 1.5,
-  scale.range = c(0.05, 0.15)
+  scale.range = c(0.05, 0.15),
+  eps = NULL,
+  scales = NULL
 )
 }
 \arguments{
@@ -40,6 +42,11 @@ sim_ipd(
 \item{shape}{Weibull shape of the baseline hazards.}
 
 \item{scale.range}{range of the study-specific Weibull scales.}
+
+\item{eps}{optional fixed K x p0 matrix of deviations (p0 <= p; remaining columns
+zero); when given, \code{het.idx}, \code{n.dev} and \code{sd.eps} are ignored.}
+
+\item{scales}{optional fixed Weibull scales of the K baseline hazards.}
 }
 \value{
 list with \code{data} (data frame: study, time, status, X1..Xp),

@@ -104,7 +104,9 @@ within one SE) are returned from the same run.
 │   ├── 00_setup.R                    scenarios, tuning constants, competitor wrappers
 │   ├── 01_run_simulation.R           Monte Carlo runner; resumable
 │   ├── 02_make_tables_figures.R      aggregates results WITHOUT refitting
-│   ├── run_all.sh                    driver (R = 50 replicates per scenario)
+│   ├── 03_oracle_study.R             oracle experiment (Section 5.5); resumable
+│   ├── 04_oracle_tables_figures.R    Tables 4-5 and Figures 5-6
+│   ├── run_all.sh                    runs both experiments (R = 50; oracle R = 200)
 │   └── results/                      per-replicate CSVs, summaries, run log
 │
 ├── application/                    # Section 6
@@ -142,13 +144,15 @@ transfer the table values from `output/tables/`.
 | Table | Contents | Produced by | Output |
 |---|---|---|---|
 | 1 | Simulation scenarios | `simulation/02_make_tables_figures.R` | `output/tables/tab_scenarios.tex` |
-| 2 | Base scenario, all methods, both rules | same | `tab_sim_base.tex` |
+| 2 | Base scenario, all 12 methods, both rules | same | `tab_sim_base.tex` |
 | 3 | Coverage of post-selection Wald intervals | same | `tab_sim_coverage.tex` |
-| 4 | Cohort characteristics | `application/03_make_tables_figures.R` | `tab_cohorts.tex` |
-| 5 | Genes selected by each method | same | `tab_app_methods.tex` |
-| 6 | Selected genes: HR, 95% CI, p, stability | same | `tab_app_genes.tex` |
-| 7 | Stratified vs frailty vs pooled hazard ratios | same | `tab_app_frailty.tex` |
-| 8 | Leave-one-study-out C-index | same | `tab_app_loso.tex` |
+| 4 | Oracle experiment: support recovery, equality with the oracle | `simulation/04_oracle_tables_figures.R` | `tab_oracle_selection.tex` |
+| 5 | Oracle experiment: bias, SD/SE, coverage, efficiency, normality | same | `tab_oracle_inference.tex` |
+| 6 | Cohort characteristics | `application/03_make_tables_figures.R` | `tab_cohorts.tex` |
+| 7 | Genes selected by each method | same | `tab_app_methods.tex` |
+| 8 | Selected genes: HR, 95% CI, p, stability | same | `tab_app_genes.tex` |
+| 9 | Stratified vs frailty vs pooled hazard ratios | same | `tab_app_frailty.tex` |
+| 10 | Leave-one-study-out C-index | same | `tab_app_loso.tex` |
 | A1 | All scenarios, all methods | `simulation/02_make_tables_figures.R` | `tab_sim_all.tex` |
 
 Long-format results with Monte Carlo standard errors are in
@@ -165,10 +169,12 @@ Long-format results with Monte Carlo standard errors are in
 | 2 | FDR and TPR by scenario | same | `sim_fdr_tpr.png` |
 | 3 | MSE of study-specific effects | same | `sim_mse_theta.png` |
 | 4 | Recovery of deviations | same | `sim_deviations.png` |
-| 5 | Kaplan–Meier curves by cohort | `application/03_make_tables_figures.R` | `app_km.png` |
-| 6 | Two-dimensional CV curve | same | `app_cv_surface.png` |
-| 7 | Global and study-specific hazard ratios | same | `app_forest.png` |
-| 8 | Bootstrap selection frequencies | same | `app_stability.png` |
+| 5 | Oracle experiment: support recovery and equality with the oracle vs n | `simulation/04_oracle_tables_figures.R` | `oracle_selection.png` |
+| 6 | Oracle experiment: normal QQ plots of standardised estimates | same | `oracle_qq.png` |
+| 7 | Kaplan–Meier curves by cohort | `application/03_make_tables_figures.R` | `app_km.png` |
+| 8 | Two-dimensional CV curve | same | `app_cv_surface.png` |
+| 9 | Global and study-specific hazard ratios | same | `app_forest.png` |
+| 10 | Bootstrap selection frequencies | same | `app_stability.png` |
 
 **These filenames are fixed by the `\includegraphics{figures/...}` calls in
 `main.tex` and must not be changed.** Uploading `output/figures/` to the Overleaf
@@ -246,8 +252,8 @@ through the same code paths as the full study.
 
 ```bash
 cd simulation
-NCORES=8 ./run_all.sh                # 13 scenarios x 12 methods, R = 50 replicates
-Rscript 02_make_tables_figures.R     # Tables 1-3, A1 and Figures 1-4 -> output/
+NCORES=8 Rscript 01_run_simulation.R 50   # 13 scenarios x 12 methods, R = 50
+Rscript 02_make_tables_figures.R          # Tables 1-3, A1 and Figures 1-4 -> output/
 ```
 
 **About 7 hours on one core for R = 50; divide by `NCORES`** (parallel runs use
@@ -268,13 +274,33 @@ recovery), deviation support (TPR and FDR of the nonzero deviations), and
 coefficients (MSE of alpha, epsilon and theta, plus the error of theta in
 near-cancelled cells where a deviation almost cancels the global effect).
 
+### Oracle experiment (Section 5.5)
+
+```bash
+cd simulation
+NCORES=8 Rscript 03_oracle_study.R 200    # 4 study sizes x 200 replicates
+Rscript 04_oracle_tables_figures.R        # Tables 4-5 and Figures 5-6 -> output/
+```
+
+This experiment verifies the oracle theory for the proposed hierarchical MCP and
+SCAD estimators, with the hierarchical lasso as a negative control. It uses a
+fixed truth that satisfies the conditions of Theorems 4.1-4.3 and growing study
+sizes (n_k = 200, 400, 800, 1600). For each replicate it records whether the
+exact support is recovered, whether the penalised estimate equals the oracle
+estimate (the unpenalised fit on the true support), and, for each of the 14
+reduced parameters, the estimate, the oracle estimate and SE, and the coverage
+of the refitted Wald interval. Three tuning strategies are compared: the
+boundary rate of Remark 4.2, lambda = 1.1 sqrt(log(max(p, N)) / N), and the two
+cross-validation rules. About 7 hours on one core; divide by `NCORES`.
+`./run_all.sh` runs both simulation experiments.
+
 ### Real data (Section 6)
 
 ```bash
 cd application
-Rscript 01_prepare_data.R            # Table 4 data, p = 500 genes
+Rscript 01_prepare_data.R            # Table 6 data, p = 500 genes
 Rscript 02_fit_and_infer.R           # all fits, inference, validation (~45 min)
-Rscript 03_make_tables_figures.R     # Tables 4-8 and Figures 5-8 -> output/
+Rscript 03_make_tables_figures.R     # Tables 6-10 and Figures 7-10 -> output/
 ```
 
 The small CSV outputs behind every application table are committed in

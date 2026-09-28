@@ -4,15 +4,15 @@
 ##  01_prepare_data.R and 02_fit_and_infer.R (nothing is refitted).
 ##
 ##  Output (copy output/ to the Overleaf project; figures/ and tables/ keep these names):
-##    output/tables/tab_cohorts.tex       Table 4
-##    output/tables/tab_app_methods.tex   Table 5
-##    output/tables/tab_app_genes.tex     Table 6
-##    output/tables/tab_app_frailty.tex   Table 7
-##    output/tables/tab_app_loso.tex      Table 8
-##    output/figures/app_km.png           Figure 5
-##    output/figures/app_cv_surface.png   Figure 6
-##    output/figures/app_forest.png       Figure 7
-##    output/figures/app_stability.png    Figure 8
+##    output/tables/tab_cohorts.tex       Table 6
+##    output/tables/tab_app_methods.tex   Table 7
+##    output/tables/tab_app_genes.tex     Table 8
+##    output/tables/tab_app_frailty.tex   Table 9
+##    output/tables/tab_app_loso.tex      Table 10
+##    output/figures/app_km.png           Figure 7
+##    output/figures/app_cv_surface.png   Figure 8
+##    output/figures/app_forest.png       Figure 9
+##    output/figures/app_stability.png    Figure 10
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2); library(survival) })
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
@@ -39,7 +39,7 @@ f3 <- function(x) formatC(x, format = "f", digits = 3)
 pfmt <- function(p) ifelse(p < 1e-4, formatC(p, format = "e", digits = 1), formatC(p, format = "f", digits = 4))
 it <- function(g) paste0("\\textit{", g, "}")
 
-## Table 4: cohorts
+## Table 6: cohorts
 writeLines(c("\\begin{tabular}{@{}llrrrrr@{}}", "\\toprule",
   "Study & GEO/TCGA series & $n_k$ & Deaths & Censored (\\%) & Median OS (yr) & Median follow-up (yr) \\\\",
   "\\midrule",
@@ -50,7 +50,7 @@ writeLines(c("\\begin{tabular}{@{}llrrrrr@{}}", "\\toprule",
           round(100 * (1 - sum(coh$Events) / sum(coh$N)))),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_cohorts.tex"))
 
-## Table 5: methods
+## Table 7: methods
 dv <- function(x) ifelse(is.na(x), "--", as.character(x))
 writeLines(c("\\begin{tabular}{@{}lrrrrr@{}}", "\\toprule",
   "& \\multicolumn{2}{c}{Genes selected} & \\multicolumn{2}{c}{Deviations} & \\\\",
@@ -60,7 +60,7 @@ writeLines(c("\\begin{tabular}{@{}lrrrrr@{}}", "\\toprule",
           dv(tm$dev_1se), formatC(tm$seconds, format = "f", digits = 1)),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_methods.tex"))
 
-## Table 6: genes (main MCP-H model)
+## Table 8: genes (main MCP-H model)
 gen <- gen[order(gen$p_value), ]
 writeLines(c("\\begin{tabular}{@{}lrrrrrrcc@{}}", "\\toprule",
   "Gene & $\\exp(\\hat\\alpha_j)$ & HR & 95\\% CI & $p$ & $p_{\\rm Holm}$ & Dev. & Boot. freq. & Methods \\\\",
@@ -71,13 +71,13 @@ writeLines(c("\\begin{tabular}{@{}lrrrrrrcc@{}}", "\\toprule",
           gen$n_deviating_studies, f2(gen$selection_freq), gen$selected_by, length(METHODS)),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_genes.tex"))
 
-## Table 7: frailty sensitivity
+## Table 9: frailty sensitivity
 writeLines(c("\\begin{tabular}{@{}llll@{}}", "\\toprule",
   "Gene & Stratified Cox & Shared gamma frailty & Naive pooling \\\\", "\\midrule",
   sprintf("%s & %s & %s & %s \\\\", it(fr$gene), fr$stratified, fr$frailty, fr$pooled),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_frailty.tex"))
 
-## Table 8: leave-one-study-out C-index (rows = methods, columns = held-out cohort)
+## Table 10: leave-one-study-out C-index (rows = methods, columns = held-out cohort)
 lm_ <- aggregate(cbind(C, n_genes) ~ method + rule, lo, mean)
 studies <- sort(unique(lo$held_out))
 rows <- c()
@@ -100,7 +100,7 @@ writeLines(c(sprintf("\\begin{tabular}{@{}l%s@{}}", strrep("r", length(studies) 
   sprintf("Method & %s & Mean C & Genes \\\\", paste(studies, collapse = " & ")),
   "\\midrule", rows, "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_loso.tex"))
 
-## Figure 5: Kaplan-Meier by cohort
+## Figure 7: Kaplan-Meier by cohort
 d <- A$dat
 km <- survfit(Surv(time, status) ~ study, data = d)
 kd <- data.frame(time = km$time, surv = km$surv,
@@ -112,7 +112,7 @@ g <- ggplot(kd, aes(time, surv, colour = study)) + geom_step(linewidth = 0.6) +
   theme(legend.position = c(0.85, 0.72))
 ggsave(file.path(fig_dir, "app_km.png"), g, width = 5.5, height = 3.6, dpi = 300)
 
-## Figure 6: CV surface of MCP-H
+## Figure 8: CV surface of MCP-H
 cvf <- fits[["MCP-H"]][["min"]]$cv
 cs <- do.call(rbind, lapply(seq_along(cvf$ratio.grid), function(r)
   data.frame(lambda = cvf$lambda.grid, cv = cvf$cvm[, r], se = cvf$cvsd[, r],
@@ -132,7 +132,7 @@ g <- ggplot(cs, aes(log(lambda), cv, colour = ratio)) + geom_line() + geom_point
   theme(legend.position = "right")
 ggsave(file.path(fig_dir, "app_cv_surface.png"), g, width = 6, height = 3.6, dpi = 300)
 
-## Figure 7: global and study-specific hazard ratios
+## Figure 9: global and study-specific hazard ratios
 sth$study <- paste("Study", sth$study)
 gl <- gen[, c("covariate", "HR", "HR_lower", "HR_upper")]; gl$study <- "Global"
 fd <- rbind(gl, sth[, c("covariate", "HR", "HR_lower", "HR_upper", "study")])
@@ -155,7 +155,7 @@ g <- ggplot(fd, aes(HR, study, colour = interaction(type, dev))) +
   theme(legend.position = "bottom")
 ggsave(file.path(fig_dir, "app_forest.png"), g, width = 7.5, height = 2.3 * ceiling(nrow(gen) / 3) + 1, dpi = 300)
 
-## Figure 8: bootstrap selection frequencies
+## Figure 10: bootstrap selection frequencies
 sf <- I$boot$selection; sf <- sf[order(-sf$selection_freq), ][1:20, ]
 sf$covariate <- factor(sf$covariate, levels = rev(sf$covariate))
 sf$sel <- ifelse(sf$covariate %in% gen$covariate, "Selected on full data", "Not selected")

@@ -17,9 +17,11 @@ setup <- new.env(); sys.source("simulation/00_setup.R", envir = setup)
 R_PAPER <- 50
 
 ## ---- code side -----------------------------------------------------------------
-tabs <- c("tab_scenarios", "tab_sim_base", "tab_sim_coverage", "tab_sim_all", "tab_cohorts",
+tabs <- c("tab_scenarios", "tab_sim_base", "tab_sim_coverage", "tab_sim_all",
+          "tab_oracle_selection", "tab_oracle_inference", "tab_cohorts",
           "tab_app_methods", "tab_app_genes", "tab_app_frailty", "tab_app_loso")
 figs <- c("sim_mcc", "sim_fdr_tpr", "sim_mse_theta", "sim_deviations",
+          "oracle_selection", "oracle_qq",
           "app_km", "app_cv_surface", "app_forest", "app_stability")
 for (t in tabs) check(paste0("output/tables/", t, ".tex exists"), file.exists(file.path("output/tables", paste0(t, ".tex"))))
 for (f in figs) check(paste0("output/figures/", f, ".png exists"), file.exists(file.path("output/figures", paste0(f, ".png"))))
@@ -34,6 +36,11 @@ if (length(raw)) {
   check(sprintf("replicates per scenario: min %d, max %d (R = %d required)", min(reps), max(reps), R_PAPER),
         all(reps == R_PAPER))
   check("no hierarchy violations in any fit", sum(X$hier_violation) == 0)
+}
+orc <- list.files("simulation/results/oracle", "^n[0-9]{4}_r[0-9]{3}\\.csv$", full.names = TRUE)
+check(sprintf("%d oracle replicate files (%d expected: 4 sizes x 200)", length(orc), 800),
+      length(orc) == 800)
+if (length(raw)) {
   st <- list.files("output/tables", "^tab_sim", full.names = TRUE)
   check("simulation tables are newer than the raw results (re-run 02_make_tables_figures.R)",
         length(st) > 0 && max(file.info(raw)$mtime) <= min(file.info(st)$mtime))

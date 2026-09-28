@@ -4,11 +4,11 @@
 ##
 ##  Input   : results/analysis_data.rds  (from 01_prepare_data.R)
 ##  Output  : results/fits.rds                     all cross-validated fits
-##            results/table_methods.csv            Table 5  (selected-set sizes)
-##            results/table_genes.csv              Table 6  (HR, 95% CI, p, stability)
-##            results/table_study_hr.csv           study-specific HRs (Figure 7)
-##            results/table_frailty.csv            Table 7  (frailty sensitivity)
-##            results/table_loso.csv               Table 8  (cross-study validation)
+##            results/table_methods.csv            Table 7  (selected-set sizes)
+##            results/table_genes.csv              Table 8  (HR, 95% CI, p, stability)
+##            results/table_study_hr.csv           study-specific HRs (Figure 9)
+##            results/table_frailty.csv            Table 9  (frailty sensitivity)
+##            results/table_loso.csv               Table 10 (cross-study validation)
 ##            results/sensitivity_folds.csv        V = 5 vs V = 10 selection
 ##  Seeds   : fold assignment seed 2026; bootstrap seed 7; LOSO seed 11.
 ##  Runtime : about 45 minutes on one core (12 methods, leave-one-study-out included).

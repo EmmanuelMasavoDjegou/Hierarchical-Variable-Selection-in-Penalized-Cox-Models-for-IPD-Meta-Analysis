@@ -9,7 +9,7 @@
 ##  Steps   : overall survival (days -> years); subjects with positive follow-up;
 ##            genes measured in all six cohorts; outcome-blind filter keeping the
 ##            p = 500 genes with the largest average within-cohort IQR rank.
-##  Output  : results/analysis_data.rds, results/table_cohorts.csv  (Table 4)
+##  Output  : results/analysis_data.rds, results/table_cohorts.csv  (Table 6)
 ################################################################################
 suppressPackageStartupMessages({ library(Biobase); library(survival) })
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")

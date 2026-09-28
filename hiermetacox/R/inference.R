@@ -140,24 +140,32 @@ within_order <- function(D, o) {
 #' @param sd.eps standard deviation of the nonzero deviations.
 #' @param shape Weibull shape of the baseline hazards.
 #' @param scale.range range of the study-specific Weibull scales.
+#' @param eps optional fixed K x p0 matrix of deviations (p0 <= p; remaining columns
+#'   zero); when given, \code{het.idx}, \code{n.dev} and \code{sd.eps} are ignored.
+#' @param scales optional fixed Weibull scales of the K baseline hazards.
 #' @return list with \code{data} (data frame: study, time, status, X1..Xp),
 #'   \code{alpha}, \code{eps} (K x p) and \code{theta} (K x p).
 #' @export
 sim_ipd <- function(K = 5, n = 200, p = 100, alpha = c(1, -0.8, 0.6, -0.5, 0.4, -0.3),
                     rho = 0.5, cens = 0.3, het.idx = 1:4, n.dev = 2, sd.eps = 0.4,
-                    shape = 1.5, scale.range = c(0.05, 0.15)) {
+                    shape = 1.5, scale.range = c(0.05, 0.15), eps = NULL, scales = NULL) {
   n <- rep_len(n, K)
   a <- c(alpha, rep(0, p - length(alpha)))
-  eps <- matrix(0, K, p)
-  if (sd.eps > 0 && length(het.idx) > 0)
-    for (j in het.idx) {
-      ks <- if (n.dev >= K) seq_len(K) else sample.int(K, n.dev)
-      eps[ks, j] <- rnorm(length(ks), 0, sd.eps)
-    }
+  if (is.null(eps)) {
+    eps <- matrix(0, K, p)
+    if (sd.eps > 0 && length(het.idx) > 0)
+      for (j in het.idx) {
+        ks <- if (n.dev >= K) seq_len(K) else sample.int(K, n.dev)
+        eps[ks, j] <- rnorm(length(ks), 0, sd.eps)
+      }
+  } else {                                  # fixed deviations supplied by the user
+    stopifnot(nrow(eps) == K, ncol(eps) <= p)
+    eps <- cbind(eps, matrix(0, K, p - ncol(eps)))
+  }
   theta <- sweep(eps, 2, a, "+")
   Sig <- rho^abs(outer(seq_len(p), seq_len(p), "-"))
   Rch <- chol(Sig)
-  lam_k <- runif(K, scale.range[1], scale.range[2])
+  lam_k <- if (is.null(scales)) runif(K, scale.range[1], scale.range[2]) else rep_len(scales, K)
   out <- vector("list", K)
   for (k in seq_len(K)) {
     X <- matrix(rnorm(n[k] * p), n[k], p) %*% Rch
