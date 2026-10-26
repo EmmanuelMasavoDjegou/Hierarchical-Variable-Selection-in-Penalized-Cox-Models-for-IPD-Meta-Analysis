@@ -4,6 +4,9 @@
 ##  used for the paper (00_setup.R / fit_method / hmc_metrics) and prints the
 ##  metrics, then fits and summarises one cross-validated model.
 ################################################################################
+## run from the repository root, whatever the current directory
+local({ f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))
+        if (length(f)) setwd(file.path(dirname(normalizePath(f[1])), "..")) })
 source("simulation/00_setup.R")
 set.seed(1)
 par <- scenario_params("Base")

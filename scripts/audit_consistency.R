@@ -8,6 +8,10 @@
 ##  Exit status is non-zero if any check fails.
 ################################################################################
 args <- commandArgs(trailingOnly = TRUE)
+if (length(args)) args[1] <- normalizePath(path.expand(args[1]), mustWork = TRUE)
+## run from the repository root, whatever the current directory
+local({ f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))
+        if (length(f)) setwd(file.path(dirname(normalizePath(f[1])), "..")) })
 ok <- TRUE
 check <- function(name, cond) {
   cat(sprintf("[%s] %s\n", if (isTRUE(cond)) "PASS" else "FAIL", name))

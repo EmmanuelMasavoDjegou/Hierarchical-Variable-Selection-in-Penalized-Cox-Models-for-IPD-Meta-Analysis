@@ -6,7 +6,8 @@
 ##  Manuscript : Hierarchical Variable Selection for Nonconvex Penalized Cox
 ##               Models in Individual-Participant-Data Meta-Analysis
 ##  Package    : hiermetacox (this repository, folder hiermetacox/)
-##  Sourced by : 01_run_simulation.R, 03_coverage_and_timing.R
+##  Sourced by : simulation/01, 03, 05; application/02, 03; scripts/quick_test.R,
+##               scripts/audit_consistency.R
 ################################################################################
 
 suppressPackageStartupMessages({

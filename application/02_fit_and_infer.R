@@ -11,9 +11,11 @@
 ##            results/table_loso.csv               Table 11 (cross-study validation)
 ##            results/sensitivity_folds.csv        V = 5 vs V = 10 selection
 ##  Seeds   : fold assignment seed 2026; bootstrap seed 7; LOSO seed 11.
-##  Runtime : about 45 minutes on one core (12 methods, leave-one-study-out included).
+##  Runtime : about 7 minutes on one core (12 methods, leave-one-study-out included).
 ################################################################################
-here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
+here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
+  if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 source(file.path(here, "..", "simulation", "00_setup.R"))       # TUNE, fit_method, std_within
 out <- file.path(here, "results")
 A <- readRDS(file.path(out, "analysis_data.rds"))

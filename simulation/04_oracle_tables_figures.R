@@ -13,7 +13,9 @@
 ##    simulation/results/oracle_summary.csv    per-parameter summaries
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2) })
-here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
+here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
+  if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 odir <- file.path(here, "results", "oracle")
 tab_dir <- file.path(here, "..", "output", "tables"); fig_dir <- file.path(here, "..", "output", "figures")
 dir.create(tab_dir, showWarnings = FALSE, recursive = TRUE); dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)

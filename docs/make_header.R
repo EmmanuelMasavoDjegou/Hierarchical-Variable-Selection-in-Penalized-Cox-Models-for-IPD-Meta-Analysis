@@ -1,4 +1,7 @@
 ## docs/make_header.R -- draws docs/header.png (README banner)
+## run from the repository root, whatever the current directory
+local({ f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))
+        if (length(f)) setwd(file.path(dirname(normalizePath(f[1])), "..")) })
 suppressPackageStartupMessages(library(ggplot2))
 set.seed(7)
 K <- 6; p <- 14

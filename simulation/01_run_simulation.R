@@ -14,11 +14,13 @@
 ##  Seeds   : replicate r of scenario s uses set.seed(20260000 + 1000 * s + r),
 ##            so every replicate can be regenerated in isolation.
 ##  Next    : 02_make_tables_figures.R builds Tables 1-3, A1 and Figures 1-4.
-##  Runtime : about 4 h on one core for R = 50; divide by NCORES.
+##  Runtime : about 4.5 h on one core for R = 50; divide by NCORES.
 ################################################################################
 
 args <- commandArgs(trailingOnly = TRUE)
-here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
+here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
+  if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 source(file.path(here, "00_setup.R"))
 Rrep <- if (length(args) >= 1) as.integer(args[1]) else 50L
 which_sc <- if (length(args) >= 2) as.integer(args[-1]) else seq_along(SCENARIOS)

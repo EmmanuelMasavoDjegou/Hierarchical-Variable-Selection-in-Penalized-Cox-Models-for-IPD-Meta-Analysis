@@ -15,7 +15,9 @@
 ##    simulation/results/sim_summary.csv       long-format summary with MC SEs
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2) })
-here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
+here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
+  if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 source(file.path(here, "00_setup.R"))
 res_dir <- file.path(here, "results")
 tab_dir <- file.path(here, "..", "output", "tables")

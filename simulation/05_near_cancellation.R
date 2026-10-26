@@ -20,11 +20,15 @@
 ##            alg_worse - is the algorithm's objective above that of the oracle fit
 ##            in its majority representation (an inferior local minimum)?
 ##  Usage   : NCORES=8 Rscript 05_near_cancellation.R [R]      (default R = 100)
+##  Runtime : about 7 minutes on one core for R = 100.
+##  Next    : 04_oracle_tables_figures.R builds Table 6.
 ##  Output  : results/nearcancel/rYYY.csv, one file per replicate
 ##  Seeds   : replicate r uses set.seed(20280000 + r).
 ################################################################################
 args <- commandArgs(trailingOnly = TRUE)
-here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
+here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
+  if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 source(file.path(here, "00_setup.R"))
 Rrep <- if (length(args) >= 1) as.integer(args[1]) else 100L
 ncores <- max(1L, as.integer(Sys.getenv("NCORES", "1")))

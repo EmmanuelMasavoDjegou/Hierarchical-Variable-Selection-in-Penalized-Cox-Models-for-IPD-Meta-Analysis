@@ -3,27 +3,35 @@
 ##  Builds the analysis data set of Section 6 from curatedOvarianData.
 ##
 ##  Input   : six ExpressionSets from the Bioconductor package curatedOvarianData
-##            (Ganzfried et al., 2013). If the package is not installed, set
-##            COD_DATA_DIR to a folder containing the *_eset.rda files
-##            (e.g. a clone of https://github.com/waldronlab/curatedOvarianData/data).
+##            (Ganzfried et al., 2013), or the six *_eset.rda files in
+##            application/curatedOvarianData/data/ or in the folder COD_DATA_DIR
+##            (see the README, "Real data", for how to obtain them).
 ##  Steps   : overall survival (days -> years); subjects with positive follow-up;
 ##            genes measured in all six cohorts; outcome-blind filter keeping the
 ##            p = 500 genes with the largest average within-cohort IQR rank.
 ##  Output  : results/analysis_data.rds, results/table_cohorts.csv  (Table 7)
 ################################################################################
 suppressPackageStartupMessages({ library(Biobase); library(survival) })
-here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
+here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
+  if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 out <- file.path(here, "results"); dir.create(out, showWarnings = FALSE)
 P_KEEP <- 500
 
 cohorts <- c(A = "TCGA_eset", B = "GSE32062.GPL6480_eset", C = "GSE9891_eset",
              D = "GSE26712_eset", E = "GSE17260_eset", F = "GSE30161_eset")
+## Data source, in this order: (1) COD_DATA_DIR, a folder of *_eset.rda files;
+## (2) application/curatedOvarianData/data/ if present (see the README);
+## (3) the installed Bioconductor package (recent versions download on first use).
+cod_dir <- Sys.getenv("COD_DATA_DIR", file.path(here, "curatedOvarianData", "data"))
 load_eset <- function(nm) {
-  if (requireNamespace("curatedOvarianData", quietly = TRUE)) {
-    e <- new.env(); utils::data(list = nm, package = "curatedOvarianData", envir = e); return(e[[nm]])
-  }
-  dir <- Sys.getenv("COD_DATA_DIR", "curatedOvarianData/data")
-  e <- new.env(); load(file.path(dir, paste0(nm, ".rda")), envir = e); e[[nm]]
+  f <- file.path(cod_dir, paste0(nm, ".rda"))
+  if (file.exists(f)) { e <- new.env(); load(f, envir = e); return(e[[nm]]) }
+  if (!requireNamespace("curatedOvarianData", quietly = TRUE))
+    stop("curatedOvarianData is not installed and ", f, " does not exist; see the README")
+  if ("curatedOvarianData" %in% getNamespaceExports("curatedOvarianData"))
+    return(curatedOvarianData::curatedOvarianData(nm))           # package >= 1.51
+  e <- new.env(); utils::data(list = nm, package = "curatedOvarianData", envir = e); e[[nm]]
 }
 
 studies <- lapply(names(cohorts), function(s) {

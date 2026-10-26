@@ -15,7 +15,9 @@
 ##    output/figures/app_stability.png    Figure 10
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2); library(survival) })
-here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
+here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
+  if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 source(file.path(here, "..", "simulation", "00_setup.R"))
 res <- file.path(here, "results")
 tab_dir <- file.path(here, "..", "output", "tables")

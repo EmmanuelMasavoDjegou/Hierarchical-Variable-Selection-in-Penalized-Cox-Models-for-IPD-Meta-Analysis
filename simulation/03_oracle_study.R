@@ -8,13 +8,17 @@
 ##
 ##  Design  : K = 5, p = 100, fixed truth satisfying Assumption 1 and condition
 ##            (a) of Theorem 4.2; study sizes n_k in {200, 400, 800, 1600}.
-##  Usage   : Rscript 03_oracle_study.R [R] ;  NCORES=8 Rscript 03_oracle_study.R 200
+##  Usage   : Rscript 03_oracle_study.R [R] [study sizes...]   (default 200; 200 400 800 1600)
+##            NCORES=8 Rscript 03_oracle_study.R 200          (paper)
 ##  Output  : results/oracle/nNNNN_rYYY.csv   one file per (size, replicate)
 ##  Seeds   : replicate r at study size n uses set.seed(20270000 + 10 * n + r).
-##  Next    : 04_oracle_tables_figures.R builds Table 4 and Figures 5-6.
+##  Runtime : about 15 h on one core for R = 200 (n_k = 1600 dominates); divide by NCORES.
+##  Next    : 04_oracle_tables_figures.R builds Tables 4-5 and Figures 5-6.
 ################################################################################
 args <- commandArgs(trailingOnly = TRUE)
-here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) ".")
+here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
+  if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 source(file.path(here, "00_setup.R"))
 Rrep <- if (length(args) >= 1) as.integer(args[1]) else 200L
 SIZES <- if (length(args) >= 2) as.integer(args[-1]) else c(200L, 400L, 800L, 1600L)
