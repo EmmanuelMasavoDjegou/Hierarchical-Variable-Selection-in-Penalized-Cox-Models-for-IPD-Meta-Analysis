@@ -274,6 +274,7 @@ with `parallel::mclapply` (Linux and macOS; on Windows leave `NCORES` unset).
 
 ```bash
 NCORES=8 Rscript simulation/01_run_simulation.R 50     # 13 scenarios x 12 methods, R = 50
+Rscript -e 'install.packages(c("S7", "ggplot2"), repos = "https://cloud.r-project.org")'
 Rscript simulation/02_make_tables_figures.R            # Tables 1-3, A1 and Figures 1-4 -> output/
 ```
 
