@@ -8,6 +8,17 @@ make_data <- function(seed = 1, K = 3, n = c(80, 120, 100), p = 5, ties = TRUE) 
   s
 }
 
+## Reference Cox fits from glmnet with Breslow ties and a tight tolerance, written so
+## that they work with glmnet < 5.0 (thresh = ...) and >= 5.0 (control = list(...),
+## cox.ties; the default tie method changes to Efron in glmnet 5.1).
+glmnet_cox <- function(x, y, ...) {
+  if (utils::packageVersion("glmnet") >= "5.0")
+    glmnet::glmnet(x, y, family = "cox", standardize = FALSE, cox.ties = "breslow",
+                   control = list(thresh = 1e-13), ...)
+  else
+    glmnet::glmnet(x, y, family = "cox", standardize = FALSE, thresh = 1e-13, ...)
+}
+
 test_that("unpenalized common-effect fit equals coxph with strata (Breslow ties)", {
   s <- make_data(); d <- s$data; X <- as.matrix(d[, -(1:3)])
   f <- hmcox(X, d$time, d$status, d$study, penalty = "lasso", lambda = 1e-10,
@@ -38,8 +49,7 @@ test_that("lasso path matches glmnet's stratified Cox model", {
              nlambda = 10, tol = 1e-10)
   D <- f$data
   y <- glmnet::stratifySurv(survival::Surv(D$time, D$status), D$sid)
-  g <- glmnet::glmnet(D$X, y, family = "cox", lambda = f$lambda, standardize = FALSE,
-                      thresh = 1e-13)
+  g <- glmnet_cox(D$X, y, lambda = f$lambda)
   expect_lt(max(abs(as.matrix(coef(g)) - f$alpha)), 1e-4)
 })
 
@@ -50,8 +60,7 @@ test_that("elastic-net path matches glmnet's stratified Cox model", {
              heterogeneity = FALSE, nlambda = 10, tol = 1e-10)
   D <- f$data
   y <- glmnet::stratifySurv(survival::Surv(D$time, D$status), D$sid)
-  g <- glmnet::glmnet(D$X, y, family = "cox", alpha = 0.5, lambda = f$lambda,
-                      standardize = FALSE, thresh = 1e-13)
+  g <- glmnet_cox(D$X, y, alpha = 0.5, lambda = f$lambda)
   expect_lt(max(abs(as.matrix(coef(g)) - f$alpha)), 1e-4)
 })
 
@@ -113,8 +122,7 @@ test_that("a single stratum (naive pooling) works and equals the unstratified Co
   one <- rep(1L, nrow(d))
   f <- hmcox(X, d$time, d$status, one, penalty = "lasso", heterogeneity = FALSE,
              nlambda = 8, tol = 1e-10)
-  g <- glmnet::glmnet(f$data$X, survival::Surv(f$data$time, f$data$status), family = "cox",
-                      lambda = f$lambda, standardize = FALSE, thresh = 1e-13)
+  g <- glmnet_cox(f$data$X, survival::Surv(f$data$time, f$data$status), lambda = f$lambda)
   expect_lt(max(abs(as.matrix(coef(g)) - f$alpha)), 1e-4)
   cvf <- cv.hmcox(X, d$time, d$status, one, penalty = "MCP", heterogeneity = FALSE,
                   nfolds = 3, seed = 1, nlambda = 10)
