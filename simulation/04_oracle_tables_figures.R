@@ -13,6 +13,13 @@
 ##    simulation/results/oracle_summary.csv    per-parameter summaries
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2) })
+## ggplot2 >= 4 needs S7's `@` method, which S7 registers only if it was installed under
+## R >= 4.3.0; a copy built under an older R fails later with "no applicable method for `@`".
+if (packageVersion("ggplot2") >= "4.0.0" && getRversion() >= "4.3.0" &&
+    !isTRUE(tryCatch(is.logical(theme_bw()@complete), error = function(e) FALSE)))
+  stop("package S7 was installed under an R version older than 4.3.0 and must be reinstalled ",
+       "under this R (", R.version.string, "). In a fresh session run:\n",
+       "  install.packages(c(\"S7\", \"ggplot2\"))\nsee the README, section 'Installation'.", call. = FALSE)
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
   f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
   if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory

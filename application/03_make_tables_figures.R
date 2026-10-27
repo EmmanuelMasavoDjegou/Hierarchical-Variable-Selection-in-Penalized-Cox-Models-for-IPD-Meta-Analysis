@@ -15,6 +15,13 @@
 ##    output/figures/app_stability.png    Figure 10
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2); library(survival) })
+## ggplot2 >= 4 needs S7's `@` method, which S7 registers only if it was installed under
+## R >= 4.3.0; a copy built under an older R fails later with "no applicable method for `@`".
+if (packageVersion("ggplot2") >= "4.0.0" && getRversion() >= "4.3.0" &&
+    !isTRUE(tryCatch(is.logical(theme_bw()@complete), error = function(e) FALSE)))
+  stop("package S7 was installed under an R version older than 4.3.0 and must be reinstalled ",
+       "under this R (", R.version.string, "). In a fresh session run:\n",
+       "  install.packages(c(\"S7\", \"ggplot2\"))\nsee the README, section 'Installation'.", call. = FALSE)
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
   f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
   if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
@@ -125,7 +132,8 @@ pts <- data.frame(lambda = cvf$lambda.grid[c(mn[1], s1[1])],
                   cv = c(cvf$cvm[mn[1], mn[2]], cvf$cvm[s1[1], s1[2]]),
                   ratio = paste0("r = ", cvf$ratio.grid[c(mn[2], s1[2])]),
                   rule = c("minimum", "one-SE"))
-g <- ggplot(cs, aes(log(lambda), cv, colour = ratio)) + geom_line() + geom_point(size = 0.9) +
+g <- ggplot(cs[!is.na(cs$cv), ], aes(log(lambda), cv, colour = ratio)) +   # path points beyond dfmax are NA
+  geom_line() + geom_point(size = 0.9) +
   geom_hline(yintercept = min(cvf$cvm, na.rm = TRUE) + cvf$cvsd[mn[1], mn[2]], linetype = 3) +
   geom_point(data = pts, aes(shape = rule), size = 3, colour = "black") +
   scale_shape_manual(values = c(minimum = 4, "one-SE" = 1), name = NULL) +
@@ -145,13 +153,14 @@ fd$study <- factor(fd$study, levels = rev(c("Global", paste("Study", LETTERS[1:6
 fd$covariate <- factor(fd$covariate, levels = gen$covariate)
 g <- ggplot(fd, aes(HR, study, colour = interaction(type, dev))) +
   geom_vline(xintercept = 1, linetype = 2, colour = "grey50") +
-  geom_errorbarh(aes(xmin = HR_lower, xmax = HR_upper), height = 0.25) +
+  geom_errorbar(aes(xmin = HR_lower, xmax = HR_upper), width = 0.25, orientation = "y") +
   geom_point(aes(shape = type), size = 2) +
   scale_shape_manual(values = c("Global effect" = 18, "Study-specific" = 16), name = NULL) +
   scale_colour_manual(values = c("Global effect.FALSE" = "#B2182B", "Study-specific.FALSE" = "grey45",
                                  "Study-specific.TRUE" = "#2166AC"),
                       labels = c("Global effect", "Study shares global effect", "Deviation selected"),
                       name = NULL) +
+  guides(colour = guide_legend(order = 1), shape = guide_legend(order = 2)) +
   scale_x_log10() + facet_wrap(~covariate, ncol = 3, scales = "free_x") +
   labs(x = "Hazard ratio per within-study SD (log scale), 95% Wald CI", y = NULL) + th +
   theme(legend.position = "bottom")

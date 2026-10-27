@@ -167,7 +167,11 @@ Per-replicate results are in `simulation/results/raw/sXX_rYYY.csv` (main study),
 `simulation/results/oracle/nNNNN_rYYY.csv` and `simulation/results/nearcancel/rYYY.csv`;
 the long-format summaries with Monte Carlo standard errors behind Tables 2-5 are
 `simulation/results/sim_summary.csv`, `sim_coverage_summary.csv` and
-`oracle_summary.csv`.
+`oracle_summary.csv`. Solver termination for every cross-validation run
+(path points that hit the iteration limit or stalled, and how often the selected
+`lambda_alpha` is the smallest grid value) is summarised by scenario and method in
+`simulation/results/sim_convergence_summary.csv`, which `02_make_tables_figures.R`
+writes and also prints in brief.
 
 ---
 
@@ -215,6 +219,18 @@ Rscript -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packag
 The code was developed and tested, and the application results reproduced
 exactly, with R 4.3.3, survival 3.5-8, ggplot2 3.4.4, Biobase 2.62.0 and glmnet
 4.1-8 (glmnet is used only to verify the solver in the package tests).
+
+**ggplot2 4 and S7.** ggplot2 4.x is built on the S7 package, which enables `@` on
+ggplot2 objects only if S7 was *installed* under R 4.3.0 or later. A copy of S7
+built under an older R (for example in a library folder shared by two R versions, or
+a mixed conda/CRAN setup) makes every figure script fail with
+`no applicable method for '@' applied to an object of class "theme"`; the scripts
+detect this and stop with instructions. The fix is to reinstall both packages under
+the R you use:
+
+```bash
+Rscript -e 'install.packages(c("S7", "ggplot2"), repos = "https://cloud.r-project.org")'
+```
 
 ### Quick start
 
@@ -274,7 +290,7 @@ with `parallel::mclapply` (Linux and macOS; on Windows leave `NCORES` unset).
 
 ```bash
 NCORES=8 Rscript simulation/01_run_simulation.R 50     # 13 scenarios x 12 methods, R = 50
-Rscript -e 'install.packages(c("S7", "ggplot2"), repos = "https://cloud.r-project.org")'
+Rscript -e 'install.packages(c("S7", "ggplot2"), repos = "https://cloud.r-project.org")'   # S7 built under this R (see Installation)
 Rscript simulation/02_make_tables_figures.R            # Tables 1-3, A1 and Figures 1-4 -> output/
 ```
 

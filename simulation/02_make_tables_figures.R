@@ -15,6 +15,13 @@
 ##    simulation/results/sim_summary.csv       long-format summary with MC SEs
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2) })
+## ggplot2 >= 4 needs S7's `@` method, which S7 registers only if it was installed under
+## R >= 4.3.0; a copy built under an older R fails later with "no applicable method for `@`".
+if (packageVersion("ggplot2") >= "4.0.0" && getRversion() >= "4.3.0" &&
+    !isTRUE(tryCatch(is.logical(theme_bw()@complete), error = function(e) FALSE)))
+  stop("package S7 was installed under an R version older than 4.3.0 and must be reinstalled ",
+       "under this R (", R.version.string, "). In a fresh session run:\n",
+       "  install.packages(c(\"S7\", \"ggplot2\"))\nsee the README, section 'Installation'.", call. = FALSE)
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
   f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
   if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
@@ -166,7 +173,7 @@ th <- theme_bw(base_size = 10) + theme(legend.position = "bottom", legend.box = 
 dodge <- position_dodge(width = 0.8)
 dotplot <- function(dat, facet, xlab, log = FALSE) {
   g <- ggplot(dat, aes(x = y, y = scen, colour = penalty, shape = structure, group = method)) +
-    geom_errorbarh(aes(xmin = y - 1.96 * se, xmax = y + 1.96 * se), height = 0,
+    geom_errorbar(aes(xmin = y - 1.96 * se, xmax = y + 1.96 * se), width = 0, orientation = "y",
                    position = dodge, linewidth = 0.3) +
     geom_point(position = dodge, size = 1.4) +
     scale_colour_manual(values = pen_cols, name = "Penalty") +
@@ -195,7 +202,7 @@ H2 <- rbind(transform(H, metric = "Deviations: true positive rate", y = TPR_dev,
 H2$metric <- factor(H2$metric, levels = c("Deviations: true positive rate", "Deviations: false discovery rate"))
 g <- ggplot(H2, aes(x = y, y = scen, colour = penalty, shape = rule_lab,
                     group = interaction(method, rule_lab))) +
-  geom_errorbarh(aes(xmin = y - 1.96 * se, xmax = y + 1.96 * se), height = 0,
+  geom_errorbar(aes(xmin = y - 1.96 * se, xmax = y + 1.96 * se), width = 0, orientation = "y",
                  position = dodge, linewidth = 0.3) +
   geom_point(position = dodge, size = 1.4) +
   scale_colour_manual(values = pen_cols, name = "Penalty (hierarchical)") +
@@ -208,5 +215,30 @@ ggsave(file.path(fig_dir, "sim_deviations.png"), g, width = 8.5, height = 8, dpi
 key <- S[S$scenario == "Base", c("method", "rule", "TPR", "FDR", "MCC", "exact", "MSE_theta", "TPR_dev", "FDR_dev", "seconds")]
 print(key[order(key$rule, key$method), ], digits = 3)
 cat("hierarchy violations (must be 0):", sum(raw$hier_violation), "\n")
-cat("non-converged hierarchical CV runs:", sum(raw$converged == 0, na.rm = TRUE), "of",
-    sum(!is.na(raw$converged)), "| boundary lambda:", mean(raw$boundary, na.rm = TRUE), "\n")
+
+## Termination of the solver (Section 3.4). Each CV run consists of (V + 1) x |ratios|
+## path fits of nlambda points each (18 x 20 = 360 path points); every path point ends
+## with the tolerance met, with no accepted halved step (stalled) or at the iteration
+## limit. converged, stalled and iter_limit are properties of the CV run and are the
+## same for both rules, so each fit is counted once (rows of the minimum rule);
+## boundary (selected lambda = smallest grid value) depends on the rule.
+n_pts <- (TUNE$nfolds + 1) * length(TUNE$ratio) * TUNE$nlambda
+fits <- raw[raw$rule == "min", ]
+conv <- do.call(rbind, lapply(split(fits, list(fits$scenario, fits$method), drop = TRUE), function(z)
+  data.frame(scenario = z$scenario[1], method = z$method[1], fits = nrow(z),
+             fits_with_iter_limit = sum(z$iter_limit > 0),
+             mean_iter_limit_points = mean(z$iter_limit), mean_stalled_points = mean(z$stalled),
+             path_points_per_fit = n_pts,
+             boundary_min = mean(raw$boundary[raw$rule == "min" & raw$scenario == z$scenario[1] & raw$method == z$method[1]]),
+             boundary_1se = mean(raw$boundary[raw$rule == "1se" & raw$scenario == z$scenario[1] & raw$method == z$method[1]]))))
+conv <- conv[order(conv$scenario, conv$method), ]
+write.csv(conv, file.path(res_dir, "sim_convergence_summary.csv"), row.names = FALSE)
+cat(sprintf("fits (CV runs) with >= 1 path point at the iteration limit: %d of %d (%.1f%%); path points at the limit: %d of %d (%.3f%%); stalled path points: %d\n",
+            sum(fits$iter_limit > 0), nrow(fits), 100 * mean(fits$iter_limit > 0),
+            sum(fits$iter_limit), nrow(fits) * n_pts, 100 * sum(fits$iter_limit) / (nrow(fits) * n_pts),
+            sum(fits$stalled)))
+cat("  by structure (fits with >= 1 iteration-limit point):\n")
+print(tapply(fits$iter_limit > 0, sub("^.*-", "", fits$method), function(v) sprintf("%d of %d", sum(v), length(v))))
+cat(sprintf("selected lambda at the smallest grid value: %.1f%% of fits (minimum rule), %.1f%% (1-SE rule)\n",
+            100 * mean(raw$boundary[raw$rule == "min"]), 100 * mean(raw$boundary[raw$rule == "1se"])))
+cat("details by scenario and method: simulation/results/sim_convergence_summary.csv\n")
