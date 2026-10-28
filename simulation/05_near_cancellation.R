@@ -23,7 +23,7 @@
 ##  Runtime : about 7 minutes on one core for R = 100.
 ##  Next    : 04_oracle_tables_figures.R builds Table 6.
 ##  Output  : results/nearcancel/rYYY.csv, one file per replicate
-##  Seeds   : replicate r uses set.seed(20280000 + r).
+##  Seeds   : replicate r uses set.seed(20280000 + r); DESIGN=bounded: 20300000 + r.
 ################################################################################
 args <- commandArgs(trailingOnly = TRUE)
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
@@ -32,7 +32,9 @@ here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e)
 source(file.path(here, "00_setup.R"))
 Rrep <- if (length(args) >= 1) as.integer(args[1]) else 100L
 ncores <- max(1L, as.integer(Sys.getenv("NCORES", "1")))
-ndir <- file.path(here, "results", "nearcancel"); dir.create(ndir, showWarnings = FALSE, recursive = TRUE)
+ndir <- file.path(here, "results", if (DESIGN == "bounded") "nearcancel_bounded" else "nearcancel")
+dir.create(ndir, showWarnings = FALSE, recursive = TRUE)
+SEED0 <- if (DESIGN == "bounded") 20300000 else 20280000
 
 NC <- local({
   K <- 5; alpha <- c(1, -0.8, 1.2, -1.2, 0.4, -0.3)
@@ -68,9 +70,13 @@ oracle_theta <- function(X, time, status, study, A, D) {
 run_one <- function(r) {
   f_out <- file.path(ndir, sprintf("r%03d.csv", r))
   if (file.exists(f_out)) return(invisible(NULL))
-  set.seed(20280000 + r)
-  sim <- sim_ipd(K = NC$K, n = NC$n, p = NC$p, alpha = NC$alpha, eps = NC$eps,
-                 scales = NC$scales, rho = 0.5, cens = 0.3)
+  set.seed(SEED0 + r)
+  sim <- if (DESIGN == "bounded")
+    sim_ipd(K = NC$K, n = NC$n, p = NC$p, alpha = NC$alpha, eps = NC$eps, scales = NC$scales,
+            rho = 0.5, xbound = BOUNDED$xbound, cens.rate = BOUNDED$nearcancel$cens.rate,
+            tau = BOUNDED$nearcancel$tau) else
+    sim_ipd(K = NC$K, n = NC$n, p = NC$p, alpha = NC$alpha, eps = NC$eps,
+            scales = NC$scales, rho = 0.5, cens = 0.3)
   d <- sim$data; X <- as.matrix(d[, -(1:3)]); N <- nrow(d)
   lam_a <- NC$kappa * sqrt(log(max(NC$p, N)) / N)
   D0 <- unname(which(sim$eps != 0, arr.ind = TRUE))

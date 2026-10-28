@@ -22,10 +22,11 @@ R_PAPER <- 50
 
 ## ---- code side -----------------------------------------------------------------
 tabs <- c("tab_scenarios", "tab_sim_base", "tab_sim_coverage", "tab_sim_all",
-          "tab_oracle_selection", "tab_oracle_inference", "tab_nearcancel", "tab_cohorts",
-          "tab_app_methods", "tab_app_genes", "tab_app_frailty", "tab_app_loso")
+          "tab_oracle_selection_bounded", "tab_oracle_selection", "tab_oracle_inference_bounded",
+          "tab_nearcancel_bounded", "tab_cv_criterion", "tab_sensitivity", "tab_cohorts",
+          "tab_app_methods", "tab_app_genes", "tab_app_frailty", "tab_app_loso", "tab_app_split")
 figs <- c("sim_mcc", "sim_fdr_tpr", "sim_mse_theta", "sim_deviations",
-          "oracle_selection", "oracle_qq",
+          "oracle_selection_bounded", "oracle_qq_bounded",
           "app_km", "app_cv_surface", "app_forest", "app_stability")
 for (t in tabs) check(paste0("output/tables/", t, ".tex exists"), file.exists(file.path("output/tables", paste0(t, ".tex"))))
 for (f in figs) check(paste0("output/figures/", f, ".png exists"), file.exists(file.path("output/figures", paste0(f, ".png"))))
@@ -46,6 +47,14 @@ check(sprintf("%d oracle replicate files (%d expected: 4 sizes x 200)", length(o
       length(orc) == 800)
 ncf <- list.files("simulation/results/nearcancel", "^r[0-9]{3}\\.csv$", full.names = TRUE)
 check(sprintf("%d near-cancellation replicate files (100 expected)", length(ncf)), length(ncf) == 100)
+orb <- list.files("simulation/results/oracle_bounded", "^n[0-9]{4}_r[0-9]{3}\\.csv$", full.names = TRUE)
+check(sprintf("%d bounded-design oracle replicate files (800 expected)", length(orb)), length(orb) == 800)
+ncb <- list.files("simulation/results/nearcancel_bounded", "^r[0-9]{3}\\.csv$", full.names = TRUE)
+check(sprintf("%d bounded-design near-cancellation files (100 expected)", length(ncb)), length(ncb) == 100)
+sen <- list.files("simulation/results/sensitivity", "^[AB]_s[0-9]{2}_r[0-9]{3}\\.csv$", full.names = TRUE)
+check(sprintf("%d sensitivity files (320 expected: 13 x 20 + 3 x 20)", length(sen)), length(sen) == 320)
+check("split-sample inference table exists (application/04_split_inference.R)",
+      file.exists("application/results/table_split.csv"))
 if (length(raw)) {
   st <- list.files("output/tables", "^tab_sim", full.names = TRUE)
   check("simulation tables are newer than the raw results (re-run 02_make_tables_figures.R)",

@@ -176,3 +176,28 @@ test_that("deviation coordinates satisfy the weighted KKT conditions (MCP and SC
   }
   expect_gt(n_checked, 50)
 })
+
+test_that("Verweij-van Houwelingen criterion equals an independent coxph computation", {
+  s <- make_data(5, n = c(90, 110, 100), p = 8); d <- s$data; X <- as.matrix(d[, -(1:3)])
+  fid <- hmc_folds(d$study, d$status, 3, seed = 3)
+  cvf <- cv.hmcox(X, d$time, d$status, d$study, penalty = "MCP", ratio = 1, nfolds = 3,
+                  foldid = fid, nlambda = 6, tol = 1e-9, cvtype = "vvh")
+  Xs <- hiermetacox:::hmc_prepare(X, d$time, d$status, d$study)$X        # sorted, standardised
+  D <- hiermetacox:::hmc_prepare(X, d$time, d$status, d$study)
+  ll <- function(eta, rows) {       # stratified Breslow log partial likelihood via coxph offsets
+    df <- data.frame(t = D$time[rows], s = D$status[rows], k = D$sid[rows], o = eta[rows])
+    survival::coxph(survival::Surv(t, s) ~ offset(o) + strata(k), data = df, ties = "breslow")$loglik[1]
+  }
+  fs <- fid[D$ord]; l <- 4; tot <- 0; tot0 <- 0
+  for (v in 1:3) {
+    tr <- fs != v
+    f <- hiermetacox:::hmc_fit_prepared(hiermetacox:::hmc_subset(D, tr), "MCP", 3, 1,
+                                        cvf$lambda.grid, TRUE, 1e-9, 50, 2000, D$p)
+    th <- sweep(matrix(f$eps[, , l], nrow = D$K), 2, f$alpha[, l], "+")
+    eta <- rowSums(Xs * th[D$sid, , drop = FALSE])
+    tot <- tot - 2 * (ll(eta, seq_len(D$N)) - ll(eta, which(tr)))
+    tot0 <- tot0 - 2 * (ll(0 * eta, seq_len(D$N)) - ll(0 * eta, which(tr)))
+  }
+  expect_equal(unname(cvf$cvm.vvh[l, 1]), tot - tot0, tolerance = 1e-6)
+  expect_equal(cvf$cvtype, "vvh")
+})

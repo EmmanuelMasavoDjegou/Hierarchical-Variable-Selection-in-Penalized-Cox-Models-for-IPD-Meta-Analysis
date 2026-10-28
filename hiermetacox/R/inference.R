@@ -143,12 +143,23 @@ within_order <- function(D, o) {
 #' @param eps optional fixed K x p0 matrix of deviations (p0 <= p; remaining columns
 #'   zero); when given, \code{het.idx}, \code{n.dev} and \code{sd.eps} are ignored.
 #' @param scales optional fixed Weibull scales of the K baseline hazards.
+#' @param xbound covariates are clipped to \eqn{[-x_{bound}, x_{bound}]} (default
+#'   \code{Inf}: Gaussian covariates, unclipped).
+#' @param cens.rate optional fixed exponential censoring hazards (length K); if
+#'   \code{NULL}, the hazard is calibrated on each sample to give proportion \code{cens}.
+#' @param tau administrative end of follow-up (scalar or length K; default \code{Inf}).
 #' @return list with \code{data} (data frame: study, time, status, X1..Xp),
 #'   \code{alpha}, \code{eps} (K x p) and \code{theta} (K x p).
 #' @export
 sim_ipd <- function(K = 5, n = 200, p = 100, alpha = c(1, -0.8, 0.6, -0.5, 0.4, -0.3),
                     rho = 0.5, cens = 0.3, het.idx = 1:4, n.dev = 2, sd.eps = 0.4,
-                    shape = 1.5, scale.range = c(0.05, 0.15), eps = NULL, scales = NULL) {
+                    shape = 1.5, scale.range = c(0.05, 0.15), eps = NULL, scales = NULL,
+                    xbound = Inf, cens.rate = NULL, tau = Inf) {
+  ## xbound: covariates are clipped to [-xbound, xbound] (bounded design);
+  ## cens.rate: fixed exponential censoring hazards (length K) instead of a rate
+  ##   calibrated on each sample to give the censoring proportion `cens`;
+  ## tau: administrative end of follow-up (length K); times are censored at tau.
+  ## The defaults reproduce the original Gaussian design exactly.
   n <- rep_len(n, K)
   a <- c(alpha, rep(0, p - length(alpha)))
   if (is.null(eps)) {
@@ -169,13 +180,17 @@ sim_ipd <- function(K = 5, n = 200, p = 100, alpha = c(1, -0.8, 0.6, -0.5, 0.4, 
   out <- vector("list", K)
   for (k in seq_len(K)) {
     X <- matrix(rnorm(n[k] * p), n[k], p) %*% Rch
+    if (is.finite(xbound)) X <- pmin(pmax(X, -xbound), xbound)
     eta <- drop(X %*% theta[k, ])
     Tt <- (-log(runif(n[k])) / (lam_k[k] * exp(eta)))^(1 / shape)
-    if (cens > 0) {
+    if (!is.null(cens.rate)) {
+      Ct <- rexp(n[k], rep_len(cens.rate, K)[k])
+    } else if (cens > 0) {
       f <- function(lc) mean(1 - exp(-lc * Tt)) - cens
       lc <- uniroot(f, c(1e-10, 1e4), tol = 1e-10)$root
       Ct <- rexp(n[k], lc)
     } else Ct <- rep(Inf, n[k])
+    Ct <- pmin(Ct, rep_len(tau, K)[k])
     out[[k]] <- data.frame(study = k, time = pmin(Tt, Ct), status = as.integer(Tt <= Ct),
                            X)
   }

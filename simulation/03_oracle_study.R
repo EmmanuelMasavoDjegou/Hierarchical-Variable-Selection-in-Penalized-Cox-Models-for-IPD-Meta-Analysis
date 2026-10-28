@@ -11,7 +11,8 @@
 ##  Usage   : Rscript 03_oracle_study.R [R] [study sizes...]   (default 200; 200 400 800 1600)
 ##            NCORES=8 Rscript 03_oracle_study.R 200          (paper)
 ##  Output  : results/oracle/nNNNN_rYYY.csv   one file per (size, replicate)
-##  Seeds   : replicate r at study size n uses set.seed(20270000 + 10 * n + r).
+##  Seeds   : replicate r at study size n uses set.seed(20270000 + 10 * n + r);
+##            DESIGN=bounded (bounded covariates, fixed tau): 20290000 + 10 * n + r.
 ##  Runtime : about 15 h on one core for R = 200 (n_k = 1600 dominates); divide by NCORES.
 ##  Next    : 04_oracle_tables_figures.R builds Tables 4-5 and Figures 5-6.
 ################################################################################
@@ -23,7 +24,12 @@ source(file.path(here, "00_setup.R"))
 Rrep <- if (length(args) >= 1) as.integer(args[1]) else 200L
 SIZES <- if (length(args) >= 2) as.integer(args[-1]) else c(200L, 400L, 800L, 1600L)
 ncores <- max(1L, as.integer(Sys.getenv("NCORES", "1")))
-odir <- file.path(here, "results", "oracle"); dir.create(odir, showWarnings = FALSE, recursive = TRUE)
+odir <- file.path(here, "results", if (DESIGN == "bounded") "oracle_bounded" else "oracle")
+dir.create(odir, showWarnings = FALSE, recursive = TRUE)
+## In the bounded design only the theory-rate tuning is run (the theorems concern a
+## deterministic lambda); set ORACLE_CV=1 to add the two cross-validation rules.
+RULES_RUN <- if (DESIGN == "gaussian" || Sys.getenv("ORACLE_CV") == "1") c("theory", "min", "1se") else "theory"
+SEED0 <- if (DESIGN == "bounded") 20290000 else 20270000
 
 ## ---- fixed truth ------------------------------------------------------------------
 ORACLE <- local({
@@ -86,9 +92,13 @@ fit_support <- function(X, time, status, study, A, D, par) {
 run_one <- function(n, r) {
   f_out <- file.path(odir, sprintf("n%04d_r%03d.csv", n, r))
   if (file.exists(f_out)) return(invisible(NULL))
-  set.seed(20270000 + 10 * n + r)
-  sim <- sim_ipd(K = ORACLE$K, n = n, p = ORACLE$p, alpha = ORACLE$alpha, rho = ORACLE$rho,
-                 cens = ORACLE$cens, eps = ORACLE$eps, scales = ORACLE$scales)
+  set.seed(SEED0 + 10 * n + r)
+  sim <- if (DESIGN == "bounded")
+    sim_ipd(K = ORACLE$K, n = n, p = ORACLE$p, alpha = ORACLE$alpha, rho = ORACLE$rho,
+            eps = ORACLE$eps, scales = ORACLE$scales, xbound = BOUNDED$xbound,
+            cens.rate = BOUNDED$oracle$cens.rate, tau = BOUNDED$oracle$tau) else
+    sim_ipd(K = ORACLE$K, n = n, p = ORACLE$p, alpha = ORACLE$alpha, rho = ORACLE$rho,
+            cens = ORACLE$cens, eps = ORACLE$eps, scales = ORACLE$scales)
   d <- sim$data; X <- as.matrix(d[, -(1:3)])       # unit-variance design, not re-standardised
   par <- true_params()
   A0 <- which(ORACLE$alpha != 0); D0 <- unname(which(sim$eps != 0, arr.ind = TRUE))
@@ -99,14 +109,15 @@ run_one <- function(n, r) {
   for (m in ORACLE_METHODS) {
     pen <- switch(sub("-H$", "", m), MCP = "MCP", SCAD = "SCAD", LASSO = "lasso")
     gam <- switch(pen, SCAD = 3.7, 3)
-    cvf <- cv.hmcox(X, d$time, d$status, d$study, penalty = pen,
-                    gamma = gam, ratio = TUNE$ratio, foldid = foldid,
-                    nlambda = TUNE$nlambda, lambda.min.ratio = TUNE$lambda.min.ratio,
-                    tol = 1e-7, dfmax = TUNE$dfmax, standardize = FALSE)
+    cvf <- if (length(RULES_RUN) > 1)
+      cv.hmcox(X, d$time, d$status, d$study, penalty = pen,
+               gamma = gam, ratio = TUNE$ratio, foldid = foldid,
+               nlambda = TUNE$nlambda, lambda.min.ratio = TUNE$lambda.min.ratio,
+               tol = 1e-7, dfmax = TUNE$dfmax, standardize = FALSE) else NULL
     fth <- hmcox(X, d$time, d$status, d$study, penalty = pen, gamma = gam, ratio = 1,
                  lambda = exp(seq(log(0.5), log(lam_th), length.out = 20)),
                  tol = 1e-7, standardize = FALSE)
-    for (rule in c("theory", "min", "1se")) {
+    for (rule in RULES_RUN) {
       cf <- if (rule == "theory") coef(fth, length(fth$lambda)) else coef(cvf, rule = rule)
       Ahat <- unname(which(cf$alpha != 0)); Dhat <- unname(which(cf$eps != 0, arr.ind = TRUE))
       correct <- setequal(Ahat, A0) && setequal(paste(Dhat[, 1], Dhat[, 2]),

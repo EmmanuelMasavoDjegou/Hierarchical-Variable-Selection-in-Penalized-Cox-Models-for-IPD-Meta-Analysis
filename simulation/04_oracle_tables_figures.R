@@ -23,13 +23,18 @@ if (packageVersion("ggplot2") >= "4.0.0" && getRversion() >= "4.3.0" &&
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
   f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
   if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
-odir <- file.path(here, "results", "oracle")
+## DESIGN=bounded summarises the bounded validation design (results/oracle_bounded,
+## results/nearcancel_bounded) and writes the outputs with the suffix "_bounded".
+DESIGN <- match.arg(Sys.getenv("DESIGN", "gaussian"), c("gaussian", "bounded"))
+SUF <- if (DESIGN == "bounded") "_bounded" else ""
+odir <- file.path(here, "results", paste0("oracle", SUF))
 tab_dir <- file.path(here, "..", "output", "tables"); fig_dir <- file.path(here, "..", "output", "figures")
 dir.create(tab_dir, showWarnings = FALSE, recursive = TRUE); dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
 x <- do.call(rbind, lapply(list.files(odir, "^n[0-9]{4}_r[0-9]{3}\\.csv$", full.names = TRUE), read.csv))
 LAB <- c("MCP-H" = "MCP, hierarchical (proposed)", "SCAD-H" = "SCAD, hierarchical (proposed)",
          "LASSO-H" = "Lasso, hierarchical (control)")
 RULES <- c(theory = "Theory rate", "1se" = "One-SE rule", min = "Minimum rule")
+RULES <- RULES[names(RULES) %in% unique(x$rule)]          # only the rules that were run
 x$method <- factor(x$method, levels = names(LAB)); x$rule <- factor(x$rule, levels = names(RULES))
 sizes <- sort(unique(x$n))
 cat("replicates per size:", tapply(x$rep, x$n, function(r) length(unique(r))), "\n")
@@ -48,13 +53,13 @@ for (rl in names(RULES)) {
       if (!nrow(s)) "--" else sprintf("%s / %s", f2(s$correct_support), f2(s$equal_oracle)) })
     rows <- c(rows, sprintf("%s & %s \\\\", LAB[[m]], paste(cells, collapse = " & ")))
   }
-  if (rl != "min") rows <- c(rows, "\\midrule")
+  if (rl != tail(names(RULES), 1)) rows <- c(rows, "\\midrule")
 }
 writeLines(c(sprintf("\\begin{tabular}{@{}l%s@{}}", strrep("c", length(sizes))), "\\toprule",
              sprintf("& \\multicolumn{%d}{c}{Study size $n_k$} \\\\", length(sizes)),
              sprintf("\\cmidrule(l){2-%d}", length(sizes) + 1),
              sprintf("Method & %s \\\\", paste(sizes, collapse = " & ")), "\\midrule", rows,
-             "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_oracle_selection.tex"))
+             "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, paste0("tab_oracle_selection", SUF, ".tex")))
 
 ## ---- per-parameter inference summaries -------------------------------------------------
 S <- do.call(rbind, lapply(split(x, list(x$method, x$rule, x$n, x$param), drop = TRUE), function(d) {
@@ -67,9 +72,13 @@ S <- do.call(rbind, lapply(split(x, list(x$method, x$rule, x$n, x$param), drop =
              eff = mean((d$oracle - d$truth)^2) / mean((d$pen - d$truth)^2),
              sw_p = if (nrow(d) >= 8 && sd(z) > 0) shapiro.test(z)$p.value else NA_real_)
 }))
-write.csv(S, file.path(here, "results", "oracle_summary.csv"), row.names = FALSE)
+write.csv(S, file.path(here, "results", paste0("oracle_summary", SUF, ".csv")), row.names = FALSE)
 
 ## ---- Table 5: inference under the theory-rate tuning -------------------------------------
+## SD/SE is defined only if every parameter has a refitted SE in some replicate; a
+## parameter whose covariate is never selected has none, and the cell shows "--".
+## Coverage counts a replicate in which the covariate is not selected as not covered.
+sdse <- function(d) { r <- d$sd_emp / d$se_mean; if (all(is.finite(r))) f2(mean(r)) else "--" }
 T5 <- S[S$rule == "theory", ]
 rows <- c()
 for (m in names(LAB)) {
@@ -78,7 +87,7 @@ for (m in names(LAB)) {
     d <- T5[T5$method == m & T5$n == n, ]
     if (!nrow(d)) next
     rows <- c(rows, sprintf("$n_k=%d$ & %s & %s & %s & %s & %s & %d/%d \\\\", n,
-                            f3(mean(abs(d$bias))), f2(mean(d$sd_emp / d$se_mean)),
+                            f3(mean(abs(d$bias))), sdse(d),
                             f3(mean(d$coverage)), f2(mean(d$eff)),
                             f2(stats::median(d$sw_p, na.rm = TRUE)),
                             sum(d$sw_p < 0.05, na.rm = TRUE), sum(!is.na(d$sw_p))))
@@ -88,7 +97,7 @@ for (m in names(LAB)) {
 writeLines(c("\\begin{tabular}{@{}lrrrrrr@{}}", "\\toprule",
              "& Mean $|\\mathrm{bias}|$ & SD/SE & Coverage & Efficiency & Median SW $p$ & SW rejections \\\\",
              "\\midrule", rows, "\\bottomrule", "\\end{tabular}"),
-           file.path(tab_dir, "tab_oracle_inference.tex"))
+           file.path(tab_dir, paste0("tab_oracle_inference", SUF, ".tex")))
 
 ## ---- Figure 5: P(correct support) and P(equal to oracle) versus n -------------------------
 L <- rbind(transform(sel, what = "Correct support", y = correct_support),
@@ -106,7 +115,7 @@ g <- ggplot(L, aes(n, y, colour = method, shape = method)) +
   theme_bw(base_size = 10) + theme(legend.position = "bottom", legend.box = "vertical",
                                    panel.grid.minor = element_blank(),
                                    strip.background = element_rect(fill = "grey93"))
-ggsave(file.path(fig_dir, "oracle_selection.png"), g, width = 8.5, height = 5.6, dpi = 300)
+ggsave(file.path(fig_dir, paste0("oracle_selection", SUF, ".png")), g, width = 8.5, height = 5.6, dpi = 300)
 
 ## ---- Figure 6: normal QQ plots of the standardised estimates -------------------------
 ## Under Theorem 4.3 each standardised estimate (hat - true) / SE_oracle is
@@ -125,10 +134,10 @@ g <- ggplot(Q, aes(sample = z, colour = method)) +
   labs(x = "Standard normal quantiles", y = expression((hat(vartheta) - vartheta[0]) / SE[oracle])) +
   theme_bw(base_size = 9) + theme(panel.grid.minor = element_blank(),
                                   strip.background = element_rect(fill = "grey93"))
-ggsave(file.path(fig_dir, "oracle_qq.png"), g, width = 8.5, height = 5.8, dpi = 300)
+ggsave(file.path(fig_dir, paste0("oracle_qq", SUF, ".png")), g, width = 8.5, height = 5.8, dpi = 300)
 
 ## ---- Table 6: near-cancellation experiment (05_near_cancellation.R) --------------------
-ndir <- file.path(here, "results", "nearcancel")
+ndir <- file.path(here, "results", paste0("nearcancel", SUF))
 nf <- list.files(ndir, "^r[0-9]{3}\\.csv$", full.names = TRUE)
 if (length(nf)) {
   y <- do.call(rbind, lapply(nf, read.csv))
@@ -152,7 +161,7 @@ if (length(nf)) {
     "& & \\multicolumn{3}{c}{MCP, hierarchical} & \\multicolumn{3}{c}{SCAD, hierarchical} \\\\",
     "\\cmidrule(lr){3-5}\\cmidrule(l){6-8}",
     "Ratio & (b) holds & Theorem & Algorithm & Inferior & Theorem & Algorithm & Inferior \\\\",
-    "\\midrule", rows, "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_nearcancel.tex"))
+    "\\midrule", rows, "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, paste0("tab_nearcancel", SUF, ".tex")))
   cat("near-cancellation replicates:", length(nf), "\n"); print(a, digits = 2)
 }
 

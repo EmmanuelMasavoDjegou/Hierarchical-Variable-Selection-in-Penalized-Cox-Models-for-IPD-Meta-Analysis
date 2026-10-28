@@ -91,14 +91,19 @@ hmc_loss <- function(D, eta, score = FALSE) {
 ## -2 * delta_i * (eta_i - log sum_{l in R_k(Y_i)} exp(eta_l)), in the sorted order
 ## of D (Breslow ties: the risk set of a tied time includes all tied subjects).
 ## Their sum is 2 * N * hmc_loss(D, eta).
+## The risk-set sums are accumulated as a reverse cumulative log-sum-exp, which stays
+## finite for arbitrarily large linear predictors (e.g. a diverging fit of a study with
+## a monotone partial likelihood), where exp(eta - max(eta)) would underflow to zero.
 hmc_dev_terms <- function(D, eta) {
   out <- numeric(D$N)
   for (k in seq_len(D$K)) {
     rows <- (D$sstart[k] + 1):D$sstart[k + 1]
-    e <- eta[rows]; m <- max(e); hz <- exp(e - m)
-    R <- rev(cumsum(rev(hz)))
-    rsk <- R[D$tfirst[rows] - D$sstart[k] + 1]
-    out[rows] <- -2 * D$status[rows] * (e - m - log(rsk))
+    e <- eta[rows]; n <- length(e); lse <- numeric(n); acc <- -Inf
+    for (i in n:1) {                      # lse[i] = log sum_{l >= i} exp(e[l])
+      mx <- max(acc, e[i]); acc <- mx + log(exp(acc - mx) + exp(e[i] - mx)); lse[i] <- acc
+    }
+    lrsk <- lse[D$tfirst[rows] - D$sstart[k] + 1]
+    out[rows] <- ifelse(D$status[rows] == 1, -2 * (e - lrsk), 0)
   }
   out
 }

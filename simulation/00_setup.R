@@ -105,3 +105,15 @@ fit_method <- function(method, X, time, status, study, foldid) {
     }
   out
 }
+
+## Bounded validation design (DESIGN=bounded in 03_oracle_study.R and
+## 05_near_cancellation.R): covariates clipped to [-3, 3], censoring hazards fixed in
+## advance and an administrative end of follow-up tau_k, so that Assumptions 4.2 and
+## 4.4 hold exactly. Constants from 06_bounded_design_constants.R.
+BOUNDED <- list(
+  xbound = 3,
+  oracle = list(cens.rate = c(0.04825, 0.05745, 0.07467, 0.0852, 0.09773),
+                tau = c(14.57, 12.81, 9.546, 8.367, 7.249)),
+  nearcancel = list(cens.rate = c(0.04463, 0.05391, 0.06397, 0.06634, 0.09971),
+                    tau = c(16.39, 14, 11.85, 11.76, 7.051)))
+DESIGN <- match.arg(Sys.getenv("DESIGN", "gaussian"), c("gaussian", "bounded"))

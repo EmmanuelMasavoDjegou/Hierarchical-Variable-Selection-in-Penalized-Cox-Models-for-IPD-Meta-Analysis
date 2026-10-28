@@ -30,7 +30,7 @@ hmc_folds <- function(study, status, nfolds = 5, seed = NULL) {
 #' formed by a path of \code{nlambda} values of \eqn{\lambda_\alpha} and the ratios
 #' \eqn{r=\lambda_\varepsilon/\lambda_\alpha} in \code{ratio}. The criterion is the
 #' cross-validated linear-predictor deviance of the stratified partial likelihood
-#' (Dai and Breheny, 2019): out-of-fold linear predictors are assembled for every
+#' (Dai and Breheny, 2024): out-of-fold linear predictors are assembled for every
 #' subject and the stratified partial likelihood deviance is evaluated on the
 #' full data. Folds are stratified by study and event status.
 #'
@@ -41,6 +41,13 @@ hmc_folds <- function(study, status, nfolds = 5, seed = NULL) {
 #' @param seed optional seed for the fold assignment.
 #' @param rule "min" (default) or "1se" (smallest model within one fold-level
 #'   standard error of the minimum).
+#' @param cvtype criterion used for selection: "lp" (default), the cross-validated
+#'   linear-predictor deviance of Dai and Breheny (2019), in which every subject's
+#'   out-of-fold linear predictor enters the full-data within-study risk sets; or
+#'   "vvh", the criterion of Verweij and van Houwelingen (1993), in which fold v
+#'   contributes the full-data minus the training-data stratified log partial
+#'   likelihood at the fit without fold v. Both are always computed and returned
+#'   (\code{cvm}, \code{cvm.vvh}); \code{cvtype} only decides which one selects.
 #' @return An object of class \code{c("cv.hmcox","hmcox")}: the full-data fit at
 #'   the selected ratio plus \code{cvm} (nlambda x nratio matrix of CV deviance),
 #'   \code{lambda.min}, \code{ratio.min} and \code{index.min}.
@@ -50,8 +57,9 @@ cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso",
                      ratio = c(0.5, 1, 2), nfolds = 5, foldid = NULL, seed = NULL,
                      nlambda = 25, lambda.min.ratio = NULL, heterogeneity = TRUE,
                      standardize = TRUE, tol = 1e-5, max.outer = 50,
-                     max.inner = 2000, dfmax = NULL, rule = c("min", "1se")) {
-  penalty <- match.arg(penalty); rule <- match.arg(rule)
+                     max.inner = 2000, dfmax = NULL, rule = c("min", "1se"),
+                     cvtype = c("lp", "vvh")) {
+  penalty <- match.arg(penalty); rule <- match.arg(rule); cvtype <- match.arg(cvtype)
   if (!heterogeneity) ratio <- 1
   D <- hmc_prepare(X, time, status, study, standardize)
   if (is.null(dfmax)) dfmax <- min(D$p, max(5, floor(sum(D$status) / 3)))
@@ -67,18 +75,27 @@ cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso",
                                   heterogeneity, tol, max.outer, max.inner, dfmax)
 
   eta_cv <- array(NA_real_, dim = c(D$N, L, R))
-  for (v in sort(unique(fs))) {
+  fl <- sort(unique(fs))
+  ## Verweij-van Houwelingen fold scores: -2 [l(theta^(-v)) - l^(-v)(theta^(-v))], centred
+  ## at the null model; full and training log partial likelihoods are both stratified.
+  vvh <- array(NA_real_, dim = c(V, L, R))
+  c0full <- sum(hmc_dev_terms(D, rep(0, D$N)))
+  for (v in fl) {
     tr <- fs != v
     Dtr <- hmc_subset(D, tr)
     te <- which(!tr)
     Xte <- D$X[te, , drop = FALSE]; ste <- D$sid[te]
+    c0tr <- sum(hmc_dev_terms(Dtr, rep(0, Dtr$N)))
     for (r in seq_len(R)) {
       f <- hmc_fit_prepared(Dtr, penalty, gamma, ratio[r], lambda,
                             heterogeneity, tol, max.outer, max.inner, dfmax)
       for (l in seq_along(f$lambda)) {
         e_l <- matrix(f$eps[, , l], nrow = D$K)           # keeps K x p when K = 1
         th <- sweep(e_l, 2, f$alpha[, l], "+")
-        eta_cv[te, l, r] <- rowSums(Xte * th[ste, , drop = FALSE])
+        eta_all <- rowSums(D$X * th[D$sid, , drop = FALSE])
+        eta_cv[te, l, r] <- eta_all[te]
+        vvh[match(v, fl), l, r] <- (sum(hmc_dev_terms(D, eta_all)) -
+                                     sum(hmc_dev_terms(Dtr, eta_all[tr]))) - (c0full - c0tr)
       }
     }
   }
@@ -92,8 +109,7 @@ cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso",
   ##             standard error of the fold mean. Folds share training data, so
   ##             this is the conventional heuristic, not an exact standard error.
   cvm <- matrix(NA_real_, L, R, dimnames = list(NULL, paste0("ratio=", ratio)))
-  cvsd <- cvm
-  fl <- sort(unique(fs))
+  cvsd <- cvm; cvm.vvh <- cvm; cvsd.vvh <- cvm
   c0 <- hmc_dev_terms(D, rep(0, D$N))
   D0v <- vapply(fl, function(v) sum(c0[fs == v]), 0)
   for (r in seq_len(R)) for (l in seq_len(L)) {
@@ -102,19 +118,23 @@ cv.hmcox <- function(X, time, status, study, penalty = c("MCP", "SCAD", "lasso",
     Delta <- vapply(fl, function(v) sum(ci[fs == v]), 0) - D0v
     cvm[l, r] <- sum(Delta)
     cvsd[l, r] <- sqrt(V) * sd(Delta)
+    if (!anyNA(vvh[, l, r])) {
+      cvm.vvh[l, r] <- sum(vvh[, l, r]); cvsd.vvh[l, r] <- sqrt(V) * sd(vvh[, l, r])
+    }
   }
   dfm <- matrix(NA_real_, L, R)
   for (r in seq_len(R)) {
     nf <- length(full[[r]]$lambda)
     dfm[seq_len(nf), r] <- colSums(full[[r]]$alpha != 0) + apply(full[[r]]$eps != 0, 3, sum)
   }
-  sel <- hmc_rule_index(cvm, cvsd, dfm)
+  sel <- if (cvtype == "vvh") hmc_rule_index(cvm.vvh, cvsd.vvh, dfm) else hmc_rule_index(cvm, cvsd, dfm)
   l.min <- sel$min[1]; r.min <- sel$min[2]
   if (rule == "1se") { l.min <- sel$se1[1]; r.min <- sel$se1[2] }
   fit <- full[[r.min]]
   structure(c(fit, list(penalty = penalty, gamma = gamma, ratio = ratio[r.min],
                         heterogeneity = heterogeneity, data = D,
-                        cvm = cvm, cvsd = cvsd, lambda.grid = lambda,
+                        cvm = cvm, cvsd = cvsd, cvm.vvh = cvm.vvh, cvsd.vvh = cvsd.vvh,
+                        cvtype = cvtype, lambda.grid = lambda,
                         ratio.grid = ratio, lambda.min = lambda[l.min],
                         ratio.min = ratio[r.min], index.min = unname(l.min),
                         sel.min = sel$min, sel.1se = sel$se1, df = dfm,
