@@ -6,13 +6,13 @@
 #   sh simulation/run_all.sh                 # from the repository root, one core
 #   NCORES=8 sh simulation/run_all.sh        # replicates in parallel (Linux/macOS)
 #
-# Single-core run times: about 4.5 h (01), 15 h (03, Gaussian design), 0.5 h (03,
+# Single-core run times: about 45 h (01), 15 h (03, Gaussian design), 0.5 h (03,
 # bounded design), 15 min (05, both designs) and 2.5 h (07); divide by NCORES.
 # Progress is appended to simulation/results/run_log.txt.
 set -e
 cd "$(dirname "$0")"
 mkdir -p results
-Rscript 01_run_simulation.R 50                  >> results/run_log.txt 2>&1   # Sections 5.1-5.4, R = 50
+Rscript 01_run_simulation.R 500                 >> results/run_log.txt 2>&1   # Sections 5.1-5.4, R = 500
 DESIGN=bounded  Rscript 03_oracle_study.R 200   >> results/run_log.txt 2>&1   # Section 5.5, bounded design
 DESIGN=gaussian Rscript 03_oracle_study.R 200   >> results/run_log.txt 2>&1   # Section 5.5, Gaussian design
 DESIGN=bounded  Rscript 05_near_cancellation.R 100 >> results/run_log.txt 2>&1 # Section 5.5, near-cancellation

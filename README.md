@@ -134,7 +134,7 @@ within one SE) are returned from the same run.
 
 **Every command in this README is run from the repository root.** The scripts
 locate their own folder, so they also work when started from elsewhere (for
-example `cd simulation && Rscript 01_run_simulation.R 50`), and they always
+example `cd simulation && Rscript 01_run_simulation.R 500`), and they always
 read and write the same files: `simulation/results/`, `application/results/` and
 `output/`.
 
@@ -295,15 +295,18 @@ with `parallel::mclapply` (Linux and macOS; on Windows leave `NCORES` unset).
 ### Simulation (Sections 5.1-5.4)
 
 ```bash
-NCORES=8 Rscript simulation/01_run_simulation.R 50     # 13 scenarios x 12 methods, R = 50
+NCORES=8 Rscript simulation/01_run_simulation.R 500    # 13 scenarios x 12 methods, R = 500
 Rscript -e 'install.packages(c("S7", "ggplot2"), repos = "https://cloud.r-project.org")'   # S7 built under this R (see Installation)
 Rscript simulation/02_make_tables_figures.R            # Tables 1-3, A1 and Figures 1-4 -> output/
 ```
 
 `01_run_simulation.R [R] [scenario numbers...]` takes the number of replicates
-(default 50, the value in the paper) and optionally a subset of scenarios,
+(default 500, the value in the paper) and optionally a subset of scenarios,
 numbered as in Table 1 (`1` = Base, ..., `13` = Small studies, p > n_k). **About
-4.5 hours on one core for R = 50; divide by `NCORES`.** The 12 methods form a full
+45 hours on one core for R = 500 (about 6 hours with `NCORES=8`).** Replicate
+`r` of scenario `s` always uses the seed `20260000 + 1000*s + r`, so files from an
+earlier R = 50 run are exactly replicates 1-50 and are kept; only 51-500 are computed.
+The 12 methods form a full
 3 x 4 design: {hierarchical, stratified common effects, naive pooling} x {MCP,
 SCAD, lasso, elastic net}. All twelve are fitted by the same `hiermetacox` solver,
 tuning grid, cross-validation criterion and folds; naive pooling is the
@@ -389,7 +392,7 @@ selected support and the objective value. **About 2.5 hours on one core.**
 NCORES=8 sh simulation/run_all.sh
 ```
 
-runs `01` (R = 50), `03` and `05` in both designs, and `07`, then the table scripts
+runs `01` (R = 500), `03` and `05` in both designs, and `07`, then the table scripts
 `02`, `04` (both designs) and `08`, so every simulation table and figure of the
 paper is written to `output/`. It stops at the
 first error, is resumable, and appends progress to `simulation/results/run_log.txt`

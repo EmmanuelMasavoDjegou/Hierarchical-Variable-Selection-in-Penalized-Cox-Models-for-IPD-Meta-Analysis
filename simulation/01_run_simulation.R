@@ -3,9 +3,9 @@
 ##  Monte Carlo study of Section 5: 13 scenarios x 12 methods x R replicates.
 ##
 ##  Usage   : Rscript 01_run_simulation.R [R] [scenario numbers...]
-##            e.g.  Rscript 01_run_simulation.R 50           (all scenarios; paper)
-##                  Rscript 01_run_simulation.R 50 1 2 3     (subset)
-##            NCORES=8 Rscript 01_run_simulation.R 50        (parallel, Unix/macOS)
+##            e.g.  Rscript 01_run_simulation.R 500          (all scenarios; paper)
+##                  Rscript 01_run_simulation.R 500 1 2 3    (subset)
+##            NCORES=8 Rscript 01_run_simulation.R 500       (parallel, Unix/macOS)
 ##  Output  : results/raw/sXX_rYYY.csv        metrics, one file per replicate
 ##            results/raw/sXX_rYYY_cov.csv    Wald-interval checks (MCP-H, SCAD-H)
 ##  Resume  : a replicate whose file exists is skipped, so the run can be
@@ -14,7 +14,10 @@
 ##  Seeds   : replicate r of scenario s uses set.seed(20260000 + 1000 * s + r),
 ##            so every replicate can be regenerated in isolation.
 ##  Next    : 02_make_tables_figures.R builds Tables 1-3, A1 and Figures 1-4.
-##  Runtime : about 4.5 h on one core for R = 50; divide by NCORES.
+##  Runtime : about 45 h on one core for R = 500 (4.5 h per 50 replicates);
+##            divide by NCORES. Replicates 1-50 are those of the first R = 50
+##            run (same seeds), so existing files in results/raw/ are kept and
+##            only replicates 51-500 are computed.
 ################################################################################
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -22,7 +25,7 @@ here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e)
   f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))     # works under Rscript
   if (length(f)) dirname(normalizePath(f[1])) else "." })                          # from any directory
 source(file.path(here, "00_setup.R"))
-Rrep <- if (length(args) >= 1) as.integer(args[1]) else 50L
+Rrep <- if (length(args) >= 1) as.integer(args[1]) else 500L
 which_sc <- if (length(args) >= 2) as.integer(args[-1]) else seq_along(SCENARIOS)
 ncores <- max(1L, as.integer(Sys.getenv("NCORES", "1")))
 rawdir <- file.path(here, "results", "raw"); dir.create(rawdir, showWarnings = FALSE, recursive = TRUE)

@@ -18,7 +18,7 @@ check <- function(name, cond) {
   if (!isTRUE(cond)) ok <<- FALSE
 }
 setup <- new.env(); sys.source("simulation/00_setup.R", envir = setup)
-R_PAPER <- 50
+R_PAPER <- 500
 
 ## ---- code side -----------------------------------------------------------------
 tabs <- c("tab_scenarios", "tab_sim_base", "tab_sim_coverage", "tab_sim_all",
@@ -95,6 +95,8 @@ if (length(args)) {
   check(sprintf("no TODO comments left (%d remaining)", ntodo), ntodo == 0)
   ntbd <- length(grab("\\\\TBD"))
   check(sprintf("no TBD placeholders left (%d remaining)", ntbd), ntbd == 0)
+  npend <- length(grab("\\\\pending\\{"))
+  check(sprintf("no \\pending{} values left (%d remaining; fill from the R = 500 run)", npend), npend == 0)
 }
 cat(if (ok) "\nAll checks passed.\n" else "\nSome checks FAILED (see above).\n")
 quit(status = if (ok) 0 else 1)
