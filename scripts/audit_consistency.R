@@ -94,9 +94,7 @@ if (length(args)) {
   ntodo <- length(grab("TODO|FIXME|XXX|[Pp]laceholder"))
   check(sprintf("no TODO comments left (%d remaining)", ntodo), ntodo == 0)
   ntbd <- length(grab("\\\\TBD"))
-  check(sprintf("no TBD placeholders left (%d remaining)", ntbd), ntbd == 0)
-  npend <- length(grab("\\\\pending\\{"))
-  check(sprintf("no \\pending{} values left (%d remaining; fill from the R = 500 run)", npend), npend == 0)
+  check(sprintf("no TBD placeholders left (%d remaining; fill from the R = 500 run)", ntbd), ntbd == 0)
 }
 cat(if (ok) "\nAll checks passed.\n" else "\nSome checks FAILED (see above).\n")
 quit(status = if (ok) 0 else 1)

@@ -144,7 +144,7 @@ for (sc in names(SCENARIOS)) {
 }
 al <- al[-length(al)]
 writeLines(c("\\begin{longtable}{@{}lrrrrrrrr@{}}",
-             "\\caption{Monte Carlo means for all scenarios. MSE$(\\theta)$ is multiplied by 100. Bold: best value within scenario and rule. Monte Carlo standard errors are in \\texttt{simulation/results/sim\\_summary.csv}.}\\label{tab:sim_all}\\\\",
+             "\\caption{Monte Carlo means for all scenarios. MSE$(\\theta)$ is multiplied by 100. Bold: best value within scenario and rule. Monte Carlo standard errors are written to \\texttt{simulation/results/sim\\_summary.csv} by \\texttt{simulation/02\\_make\\_tables\\_figures.R}.}\\label{tab:sim_all}\\\\",
              "\\toprule",
              "& \\multicolumn{4}{c}{One-SE rule} & \\multicolumn{4}{c}{Minimum rule} \\\\",
              "\\cmidrule(lr){2-5}\\cmidrule(l){6-9}",

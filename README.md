@@ -101,31 +101,30 @@ within one SE) are returned from the same run.
 │   └── tests/testthat/               solver correctness tests
 │
 ├── simulation/                     # Section 5
-│   ├── 00_setup.R                    scenarios, tuning constants, the 12 methods
-│   ├── 01_run_simulation.R           main study (Sections 5.1-5.4); resumable
+│   ├── 00_setup.R                    scenarios, tuning constants, the 12 methods,
+│   │                                 bounded-design constants (BOUNDED)
+│   ├── 01_run_simulation.R           main study (Sections 5.1-5.4), R = 500; resumable
 │   ├── 02_make_tables_figures.R      Tables 1-3, A1 and Figures 1-4, WITHOUT refitting
 │   ├── 03_oracle_study.R             oracle experiment (Section 5.5); resumable
 │   ├── 04_oracle_tables_figures.R    Tables 4-6 and Figures 5-6, WITHOUT refitting
 │   ├── 05_near_cancellation.R        near-cancellation experiment (Section 5.5); resumable
-│   ├── run_all.sh                    runs 01, 03, 05, then 02 and 04
-│   └── results/                      per-replicate CSVs, summaries, run log
-│                                     (created by the first run)
+│   ├── 06_bounded_design_constants.R pilot that computed the BOUNDED constants
+│   ├── 07_sensitivity.R              CV-criterion and optimisation sensitivity (Section 5.6)
+│   ├── 08_sensitivity_tables.R       Tables 7-8, WITHOUT refitting
+│   └── run_all.sh                    runs every experiment, then every table script
 │
 ├── application/                    # Section 6
 │   ├── 01_prepare_data.R             curatedOvarianData -> analysis data (p = 500)
 │   ├── 02_fit_and_infer.R            12 methods, inference, bootstrap, frailty,
 │   │                                 fold sensitivity, leave-one-study-out validation
-│   ├── 03_make_tables_figures.R      Tables 7-11 and Figures 7-10 from stored results
-│   ├── curatedOvarianData.md5        checksums of the six input data files
-│   └── results/                      CSV outputs (committed) and RDS objects (not committed)
-│
-├── output/                         # everything that goes into the paper
-│   ├── tables/                       LaTeX tables written by the scripts
-│   └── figures/                      PNG figures (300 dpi) written by the scripts
+│   ├── 03_make_tables_figures.R      Tables 9-13 and Figures 7-10 from stored results
+│   ├── 04_split_inference.R          multi-split p-values (Table 14)
+│   └── curatedOvarianData.md5        checksums of the six input data files
 │
 ├── scripts/
 │   ├── quick_test.R                  run this first (about 30 s)
-│   └── audit_consistency.R           code <-> manuscript consistency check
+│   ├── audit_consistency.R           code <-> manuscript consistency check
+│   └── r500_text_values.py           prints the simulation numbers quoted in the text
 │
 ├── docs/header.png, docs/make_header.R
 ├── CITATION.cff
@@ -136,7 +135,9 @@ within one SE) are returned from the same run.
 locate their own folder, so they also work when started from elsewhere (for
 example `cd simulation && Rscript 01_run_simulation.R 500`), and they always
 read and write the same files: `simulation/results/`, `application/results/` and
-`output/`.
+`output/`. **The repository contains code only.** These three folders, with all
+per-replicate results, summaries, tables and figures, are created when the scripts
+run and are not part of the repository (they are listed in `.gitignore`).
 
 ---
 
@@ -166,7 +167,7 @@ transfer the table values from `output/tables/`.
 | 14 | Multi-split p-values over all 500 genes | `application/04_split_inference.R` | `tab_app_split.tex` |
 | A1 | All scenarios, all methods | `simulation/02_make_tables_figures.R` | `tab_sim_all.tex` |
 
-Per-replicate results are in `simulation/results/raw/sXX_rYYY.csv` (main study),
+Per-replicate results are written to `simulation/results/raw/sXX_rYYY.csv` (main study),
 `simulation/results/oracle/nNNNN_rYYY.csv`, `simulation/results/nearcancel/rYYY.csv`
 (Gaussian design; the bounded design writes to `oracle_bounded/` and
 `nearcancel_bounded/`) and `simulation/results/sensitivity/{A,B}_sXX_rYYY.csv`;
@@ -433,12 +434,12 @@ twelve methods with five-fold CV (fold seed 2026), the post-selection inference
 and 100 bootstrap refits (seed 7) for hierarchical MCP under the minimum rule, the
 frailty comparison, the ten-fold sensitivity analysis, and the leave-one-study-out
 validation (seed 11). It caches its intermediate results in
-`application/results/*.rds` and `application/results/loso/` (about 150 MB, not
-committed) and skips any step whose cache exists, so delete those files to
-recompute from scratch. The small CSV outputs behind every application table are
-committed in `application/results/`; a rerun reproduces them exactly except the
-CV-time column of `table_methods.csv` (Table 8), which is wall-clock time and
-depends on the machine. `03_make_tables_figures.R` needs the `.rds` files, so run
+`application/results/*.rds` and `application/results/loso/` (about 150 MB) and
+skips any step whose cache exists, so delete those files to recompute from scratch.
+It also writes the small CSV files behind every application table to
+`application/results/`; with the stated seeds a rerun reproduces the published
+values exactly except the CV-time column of `table_methods.csv` (Table 10), which
+is wall-clock time and depends on the machine. `03_make_tables_figures.R` needs the `.rds` files, so run
 `01` and `02` first.
 
 `04_split_inference.R` (added in the revision) computes multi-split p-values
@@ -516,9 +517,9 @@ Rscript scripts/audit_consistency.R path/to/main.tex       # + your manuscript c
 ```
 
 Each check prints `PASS` or `FAIL`, and the exit status is non-zero if any
-fails. The code-side checks confirm that every table and figure exists in
-`output/`; that there are exactly 13 x 50 main-study, 4 x 200 oracle and 100
-near-cancellation replicate files; that every replicate has all 12 methods; that
+fails. The checks assume the scripts have been run, since no outputs are shipped. The code-side checks confirm that every table and figure exists in
+`output/`; that there are exactly 13 x 500 main-study, 4 x 200 oracle and 100
+near-cancellation replicate files in each design and 320 sensitivity files; that every replicate has all 12 methods; that
 no fit violates the hierarchy; and that the simulation tables are newer than the
 raw results. Given the path to a copy of `main.tex` (for example downloaded from
 Overleaf, with `references.bib` next to it), it also checks that every
