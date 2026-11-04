@@ -8,10 +8,7 @@
 ##    output/tables/tab_sim_base.tex       Table 2
 ##    output/tables/tab_sim_coverage.tex   Table 3
 ##    output/tables/tab_sim_all.tex        Table A1 (appendix)
-##    output/figures/sim_mcc.png           Figure 1
-##    output/figures/sim_fdr_tpr.png       Figure 2
-##    output/figures/sim_mse_theta.png     Figure 3
-##    output/figures/sim_deviations.png    Figure 4
+##    output/figures/sim_*_{1se,min}.png   Figures 1-10 (drawn by 09_simulation_figures.R)
 ##    simulation/results/sim_summary.csv       long-format summary with MC SEs
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2) })
@@ -155,61 +152,8 @@ writeLines(c("\\begin{longtable}{@{}lrrrrrrrr@{}}",
            file.path(tab_dir, "tab_sim_all.tex"))
 
 ## ---- Figures ----------------------------------------------------------------------
-## Colour encodes the penalty and marker shape the model structure, so that the
-## 3 x 4 design can be read at a glance.
-S$penalty <- factor(sub("-(H|S|P)$", "", S$method), levels = c("MCP", "SCAD", "LASSO", "ENet"),
-                    labels = c("MCP", "SCAD", "Lasso", "Elastic net"))
-S$structure <- factor(sub("^.*-", "", S$method), levels = c("H", "S", "P"),
-                      labels = c("Hierarchical", "Stratified common effects", "Naive pooling"))
-pen_cols <- c("MCP" = "#B2182B", "SCAD" = "#EF8A62", "Lasso" = "#2166AC", "Elastic net" = "#7F7F7F")
-str_shp <- c("Hierarchical" = 16, "Stratified common effects" = 15, "Naive pooling" = 2)
-S$scen <- factor(S$scenario, levels = rev(names(SCENARIOS)))
-S$rule_lab <- factor(ifelse(S$rule == "1se", "One-standard-error rule", "Minimum-deviance rule"),
-                     levels = c("One-standard-error rule", "Minimum-deviance rule"))
-th <- theme_bw(base_size = 10) + theme(legend.position = "bottom", legend.box = "vertical",
-                                       legend.margin = margin(0, 0, 0, 0),
-                                       panel.grid.minor = element_blank(),
-                                       strip.background = element_rect(fill = "grey93"))
-dodge <- position_dodge(width = 0.8)
-dotplot <- function(dat, facet, xlab, log = FALSE) {
-  g <- ggplot(dat, aes(x = y, y = scen, colour = penalty, shape = structure, group = method)) +
-    geom_errorbar(aes(xmin = y - 1.96 * se, xmax = y + 1.96 * se), width = 0, orientation = "y",
-                   position = dodge, linewidth = 0.3) +
-    geom_point(position = dodge, size = 1.4) +
-    scale_colour_manual(values = pen_cols, name = "Penalty") +
-    scale_shape_manual(values = str_shp, name = "Structure") +
-    facet_wrap(facet, scales = "free_x") + labs(x = xlab, y = NULL) + th +
-    guides(colour = guide_legend(nrow = 1, order = 1), shape = guide_legend(nrow = 1, order = 2))
-  if (log) g <- g + scale_x_log10()
-  g
-}
-dotfig <- function(v, lab, file, h = 9, w = 8.5, log = FALSE) {
-  d <- S; d$y <- d[[v]]; d$se <- d[[paste0(v, "_se")]]
-  ggsave(file.path(fig_dir, file), dotplot(d, ~rule_lab, lab, log), width = w, height = h, dpi = 300)
-}
-dotfig("MCC", "Matthews correlation coefficient (global selection)", "sim_mcc.png")
-dotfig("MSE_theta", "MSE of study-specific log-hazard ratios (log scale)", "sim_mse_theta.png", log = TRUE)
-
-L <- rbind(transform(S, metric = "False discovery rate", y = FDR, se = FDR_se),
-           transform(S, metric = "True positive rate", y = TPR, se = TPR_se))
-L <- L[L$rule == "1se", ]
-ggsave(file.path(fig_dir, "sim_fdr_tpr.png"),
-       dotplot(L, ~metric, "One-standard-error rule"), width = 8.5, height = 9, dpi = 300)
-
-H <- S[S$structure == "Hierarchical" & !S$scenario %in% c("No heterogeneity"), ]
-H2 <- rbind(transform(H, metric = "Deviations: true positive rate", y = TPR_dev, se = TPR_dev_se),
-            transform(H, metric = "Deviations: false discovery rate", y = FDR_dev, se = FDR_dev_se))
-H2$metric <- factor(H2$metric, levels = c("Deviations: true positive rate", "Deviations: false discovery rate"))
-g <- ggplot(H2, aes(x = y, y = scen, colour = penalty, shape = rule_lab,
-                    group = interaction(method, rule_lab))) +
-  geom_errorbar(aes(xmin = y - 1.96 * se, xmax = y + 1.96 * se), width = 0, orientation = "y",
-                 position = dodge, linewidth = 0.3) +
-  geom_point(position = dodge, size = 1.4) +
-  scale_colour_manual(values = pen_cols, name = "Penalty (hierarchical)") +
-  scale_shape_manual(values = c(16, 1), name = NULL) +
-  facet_wrap(~metric, scales = "free_x") + labs(x = NULL, y = NULL) + th +
-  guides(colour = guide_legend(nrow = 1, order = 1), shape = guide_legend(nrow = 1, order = 2))
-ggsave(file.path(fig_dir, "sim_deviations.png"), g, width = 8.5, height = 8, dpi = 300)
+## Drawn by 09_simulation_figures.R from results/sim_summary.csv (written above).
+source(file.path(here, "09_simulation_figures.R"), local = new.env())
 
 ## key numbers used in the text (printed so they can be checked against main.tex)
 key <- S[S$scenario == "Base", c("method", "rule", "TPR", "FDR", "MCC", "exact", "MSE_theta", "TPR_dev", "FDR_dev", "seconds")]

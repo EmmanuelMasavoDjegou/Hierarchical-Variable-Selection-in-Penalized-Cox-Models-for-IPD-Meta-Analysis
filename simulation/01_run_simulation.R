@@ -13,7 +13,7 @@
 ##            atomically (temporary name, then rename).
 ##  Seeds   : replicate r of scenario s uses set.seed(20260000 + 1000 * s + r),
 ##            so every replicate can be regenerated in isolation.
-##  Next    : 02_make_tables_figures.R builds Tables 1-3, A1 and Figures 1-4.
+##  Next    : 02_make_tables_figures.R builds Tables 1-3, A1 and (via 09) Figures 1-10.
 ##  Runtime : about 45 h on one core for R = 500 (4.5 h per 50 replicates);
 ##            divide by NCORES. Replicates 1-50 are those of the first R = 50
 ##            run (same seeds), so existing files in results/raw/ are kept and

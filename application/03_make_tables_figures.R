@@ -9,10 +9,10 @@
 ##    output/tables/tab_app_genes.tex     Table 9
 ##    output/tables/tab_app_frailty.tex   Table 10
 ##    output/tables/tab_app_loso.tex      Table 11
-##    output/figures/app_km.png           Figure 7
-##    output/figures/app_cv_surface.png   Figure 8
-##    output/figures/app_forest.png       Figure 9
-##    output/figures/app_stability.png    Figure 10
+##    output/figures/app_km.png           Figure 13
+##    output/figures/app_cv_surface.png   Figure 14
+##    output/figures/app_forest.png       Figure 15
+##    output/figures/app_stability.png    Figure 16
 ################################################################################
 suppressPackageStartupMessages({ library(ggplot2); library(survival) })
 ## ggplot2 >= 4 needs S7's `@` method, which S7 registers only if it was installed under
@@ -109,7 +109,7 @@ writeLines(c(sprintf("\\begin{tabular}{@{}l%s@{}}", strrep("r", length(studies) 
   sprintf("Method & %s & Mean C & Genes \\\\", paste(studies, collapse = " & ")),
   "\\midrule", rows, "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_loso.tex"))
 
-## Figure 7: Kaplan-Meier by cohort
+## Figure 13: Kaplan-Meier by cohort
 d <- A$dat
 km <- survfit(Surv(time, status) ~ study, data = d)
 kd <- data.frame(time = km$time, surv = km$surv,
@@ -121,7 +121,7 @@ g <- ggplot(kd, aes(time, surv, colour = study)) + geom_step(linewidth = 0.6) +
   theme(legend.position = c(0.85, 0.72))
 ggsave(file.path(fig_dir, "app_km.png"), g, width = 5.5, height = 3.6, dpi = 300)
 
-## Figure 8: CV surface of MCP-H
+## Figure 14: CV surface of MCP-H
 cvf <- fits[["MCP-H"]][["min"]]$cv
 cs <- do.call(rbind, lapply(seq_along(cvf$ratio.grid), function(r)
   data.frame(lambda = cvf$lambda.grid, cv = cvf$cvm[, r], se = cvf$cvsd[, r],
@@ -142,7 +142,7 @@ g <- ggplot(cs[!is.na(cs$cv), ], aes(log(lambda), cv, colour = ratio)) +   # pat
   theme(legend.position = "right")
 ggsave(file.path(fig_dir, "app_cv_surface.png"), g, width = 6, height = 3.6, dpi = 300)
 
-## Figure 9: global and study-specific hazard ratios
+## Figure 15: global and study-specific hazard ratios
 sth$study <- paste("Study", sth$study)
 gl <- gen[, c("covariate", "HR", "HR_lower", "HR_upper")]; gl$study <- "Global"
 fd <- rbind(gl, sth[, c("covariate", "HR", "HR_lower", "HR_upper", "study")])
@@ -166,7 +166,7 @@ g <- ggplot(fd, aes(HR, study, colour = interaction(type, dev))) +
   theme(legend.position = "bottom")
 ggsave(file.path(fig_dir, "app_forest.png"), g, width = 7.5, height = 2.3 * ceiling(nrow(gen) / 3) + 1, dpi = 300)
 
-## Figure 10: bootstrap selection frequencies
+## Figure 16: bootstrap selection frequencies
 sf <- I$boot$selection; sf <- sf[order(-sf$selection_freq), ][1:20, ]
 sf$covariate <- factor(sf$covariate, levels = rev(sf$covariate))
 sf$sel <- ifelse(sf$covariate %in% gen$covariate, "Selected on full data", "Not selected")

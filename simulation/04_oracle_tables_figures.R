@@ -7,8 +7,8 @@
 ##  Output (copy output/ to the Overleaf project):
 ##    output/tables/tab_oracle_selection.tex   Table 4  (support recovery, equality)
 ##    output/tables/tab_oracle_inference.tex   Table 5  (bias, SD/SE, coverage, ...)
-##    output/figures/oracle_selection.png      Figure 5
-##    output/figures/oracle_qq.png             Figure 6
+##    output/figures/oracle_selection.png      Figure 11 (oracle_selection_bounded.png with DESIGN=bounded)
+##    output/figures/oracle_qq.png             Figure 12 (oracle_qq_bounded.png with DESIGN=bounded)
 ##    output/tables/tab_nearcancel.tex         Table 6  (near-cancellation, Theorem 4.2)
 ##    simulation/results/oracle_summary.csv    per-parameter summaries
 ################################################################################
@@ -99,7 +99,7 @@ writeLines(c("\\begin{tabular}{@{}lrrrrrr@{}}", "\\toprule",
              "\\midrule", rows, "\\bottomrule", "\\end{tabular}"),
            file.path(tab_dir, paste0("tab_oracle_inference", SUF, ".tex")))
 
-## ---- Figure 5: P(correct support) and P(equal to oracle) versus n -------------------------
+## ---- Figure 11: P(correct support) and P(equal to oracle) versus n -------------------------
 L <- rbind(transform(sel, what = "Correct support", y = correct_support),
            transform(sel, what = "Equal to the oracle", y = equal_oracle))
 L$rule_lab <- factor(RULES[as.character(L$rule)], levels = RULES)
@@ -117,7 +117,7 @@ g <- ggplot(L, aes(n, y, colour = method, shape = method)) +
                                    strip.background = element_rect(fill = "grey93"))
 ggsave(file.path(fig_dir, paste0("oracle_selection", SUF, ".png")), g, width = 8.5, height = 5.6, dpi = 300)
 
-## ---- Figure 6: normal QQ plots of the standardised estimates -------------------------
+## ---- Figure 12: normal QQ plots of the standardised estimates -------------------------
 ## Under Theorem 4.3 each standardised estimate (hat - true) / SE_oracle is
 ## asymptotically N(0, 1); the 14 reduced parameters are pooled within each panel.
 Q <- x[x$rule == "theory", ]

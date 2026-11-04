@@ -25,7 +25,8 @@ tabs <- c("tab_scenarios", "tab_sim_base", "tab_sim_coverage", "tab_sim_all",
           "tab_oracle_selection_bounded", "tab_oracle_selection", "tab_oracle_inference_bounded",
           "tab_nearcancel_bounded", "tab_cv_criterion", "tab_sensitivity", "tab_cohorts",
           "tab_app_methods", "tab_app_genes", "tab_app_frailty", "tab_app_loso", "tab_app_split")
-figs <- c("sim_mcc", "sim_fdr_tpr", "sim_mse_theta", "sim_deviations",
+figs <- c(paste0(rep(c("sim_mcc", "sim_mcc_diff", "sim_fdr_tpr", "sim_mse_theta", "sim_deviations"), each = 2),
+                 c("_1se", "_min")),
           "oracle_selection_bounded", "oracle_qq_bounded",
           "app_km", "app_cv_surface", "app_forest", "app_stability")
 for (t in tabs) check(paste0("output/tables/", t, ".tex exists"), file.exists(file.path("output/tables", paste0(t, ".tex"))))

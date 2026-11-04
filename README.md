@@ -104,20 +104,21 @@ within one SE) are returned from the same run.
 │   ├── 00_setup.R                    scenarios, tuning constants, the 12 methods,
 │   │                                 bounded-design constants (BOUNDED)
 │   ├── 01_run_simulation.R           main study (Sections 5.1-5.4), R = 500; resumable
-│   ├── 02_make_tables_figures.R      Tables 1-3, A1 and Figures 1-4, WITHOUT refitting
+│   ├── 02_make_tables_figures.R      Tables 1-3, A1, WITHOUT refitting; calls 09
 │   ├── 03_oracle_study.R             oracle experiment (Section 5.5); resumable
-│   ├── 04_oracle_tables_figures.R    Tables 4-6 and Figures 5-6, WITHOUT refitting
+│   ├── 04_oracle_tables_figures.R    Tables 4-6 and Figures 11-12, WITHOUT refitting
 │   ├── 05_near_cancellation.R        near-cancellation experiment (Section 5.5); resumable
 │   ├── 06_bounded_design_constants.R pilot that computed the BOUNDED constants
 │   ├── 07_sensitivity.R              CV-criterion and optimisation sensitivity (Section 5.6)
 │   ├── 08_sensitivity_tables.R       Tables 7-8, WITHOUT refitting
+│   ├── 09_simulation_figures.R       Figures 1-10 from results/sim_summary.csv only
 │   └── run_all.sh                    runs every experiment, then every table script
 │
 ├── application/                    # Section 6
 │   ├── 01_prepare_data.R             curatedOvarianData -> analysis data (p = 500)
 │   ├── 02_fit_and_infer.R            12 methods, inference, bootstrap, frailty,
 │   │                                 fold sensitivity, leave-one-study-out validation
-│   ├── 03_make_tables_figures.R      Tables 9-13 and Figures 7-10 from stored results
+│   ├── 03_make_tables_figures.R      Tables 9-13 and Figures 13-16 from stored results
 │   ├── 04_split_inference.R          multi-split p-values (Table 14)
 │   └── curatedOvarianData.md5        checksums of the six input data files
 │
@@ -155,7 +156,7 @@ transfer the table values from `output/tables/`.
 | 2 | Base scenario, all 12 methods, both rules | same | `tab_sim_base.tex` |
 | 3 | Coverage of post-selection Wald intervals | same | `tab_sim_coverage.tex` |
 | 4 | Oracle experiment: support recovery, equality with the oracle (top: bounded design; bottom: Gaussian design) | `simulation/04_oracle_tables_figures.R` with `DESIGN=bounded` and `DESIGN=gaussian` (data from `03_oracle_study.R`) | `tab_oracle_selection_bounded.tex`, `tab_oracle_selection.tex` |
-| 5 | Oracle experiment, bounded design: bias, SD/SE, coverage, efficiency, normality | `DESIGN=bounded simulation/04_oracle_tables_figures.R` | `tab_oracle_inference_bounded.tex` |
+| 11 | Oracle experiment, bounded design: bias, SD/SE, coverage, efficiency, normality | `DESIGN=bounded simulation/04_oracle_tables_figures.R` | `tab_oracle_inference_bounded.tex` |
 | 6 | Near-cancellation experiment, bounded design: Theorem 4.2 check and algorithm check | same (data from `05_near_cancellation.R`) | `tab_nearcancel_bounded.tex` |
 | 7 | Cross-validation criterion: linear predictor vs Verweij–van Houwelingen | `simulation/08_sensitivity_tables.R` (data from `07_sensitivity.R`) | `tab_cv_criterion.tex` |
 | 8 | Optimisation sensitivity: folds, tolerance, ratio grid, starting values | same | `tab_sensitivity.tex` |
@@ -186,16 +187,17 @@ writes and also prints in brief.
 
 | Figure | Contents | Produced by | Output (in `output/figures/`) |
 |---|---|---|---|
-| 1 | MCC by scenario, both rules | `simulation/02_make_tables_figures.R` | `sim_mcc.png` |
-| 2 | FDR and TPR by scenario | same | `sim_fdr_tpr.png` |
-| 3 | MSE of study-specific effects | same | `sim_mse_theta.png` |
-| 4 | Recovery of deviations | same | `sim_deviations.png` |
-| 5 | Oracle experiment (bounded design): support recovery and equality with the oracle vs n | `DESIGN=bounded simulation/04_oracle_tables_figures.R` | `oracle_selection_bounded.png` |
-| 6 | Oracle experiment (bounded design): normal QQ plots of standardised estimates | same | `oracle_qq_bounded.png` |
-| 7 | Kaplan–Meier curves by cohort | `application/03_make_tables_figures.R` | `app_km.png` |
-| 8 | Two-dimensional CV curve | same | `app_cv_surface.png` |
-| 9 | Global and study-specific hazard ratios | same | `app_forest.png` |
-| 10 | Bootstrap selection frequencies | same | `app_stability.png` |
+| 1, 2 | MCC of global selection, all methods (value table): one-SE rule, minimum rule | `simulation/09_simulation_figures.R` (called by `02`) | `sim_mcc_1se.png`, `sim_mcc_min.png` |
+| 3, 4 | Paired MCC differences: hierarchical − stratified, stratified − pooled | same | `sim_mcc_diff_1se.png`, `sim_mcc_diff_min.png` |
+| 5, 6 | FDR and TPR of global selection (value table) | same | `sim_fdr_tpr_1se.png`, `sim_fdr_tpr_min.png` |
+| 7, 8 | MSE of study-specific effects ×100 (value table) | same | `sim_mse_theta_1se.png`, `sim_mse_theta_min.png` |
+| 9, 10 | Recovery of the deviations, hierarchical methods (value table) | same | `sim_deviations_1se.png`, `sim_deviations_min.png` |
+| 11 | Oracle experiment (bounded design): support recovery and equality with the oracle vs n | `DESIGN=bounded simulation/04_oracle_tables_figures.R` | `oracle_selection_bounded.png` |
+| 12 | Oracle experiment (bounded design): normal QQ plots of standardised estimates | same | `oracle_qq_bounded.png` |
+| 13 | Kaplan–Meier curves by cohort | `application/03_make_tables_figures.R` | `app_km.png` |
+| 14 | Two-dimensional CV curve | same | `app_cv_surface.png` |
+| 15 | Global and study-specific hazard ratios | same | `app_forest.png` |
+| 16 | Bootstrap selection frequencies | same | `app_stability.png` |
 
 **These filenames are fixed by the `\includegraphics{figures/...}` calls in
 `main.tex` and must not be changed.** Uploading `output/figures/` to the Overleaf
@@ -298,7 +300,8 @@ with `parallel::mclapply` (Linux and macOS; on Windows leave `NCORES` unset).
 ```bash
 NCORES=8 Rscript simulation/01_run_simulation.R 500    # 13 scenarios x 12 methods, R = 500
 Rscript -e 'install.packages(c("S7", "ggplot2"), repos = "https://cloud.r-project.org")'   # S7 built under this R (see Installation)
-Rscript simulation/02_make_tables_figures.R            # Tables 1-3, A1 and Figures 1-4 -> output/
+Rscript simulation/02_make_tables_figures.R            # Tables 1-3, A1 and Figures 1-10 -> output/
+Rscript simulation/09_simulation_figures.R             # Figures 1-10 only (already run by 02)
 ```
 
 `01_run_simulation.R [R] [scenario numbers...]` takes the number of replicates
@@ -319,7 +322,12 @@ skipped. Replicate `r` of scenario `s` uses `set.seed(20260000 + 1000 * s + r)`,
 so any single replicate can be regenerated in isolation, e.g.
 `Rscript simulation/01_run_simulation.R 1 1` (replicate 1 of the Base scenario,
 about 15 s). `02_make_tables_figures.R` refits nothing; it aggregates
-`simulation/results/raw/` and reports the number of replicates per scenario.
+`simulation/results/raw/` and reports the number of replicates per scenario, and
+at its end calls `09_simulation_figures.R`. That script draws Figures 1-10 from
+`simulation/results/sim_summary.csv` alone, in a few seconds, so the figures can be
+redrawn without the per-replicate files: run it on its own after changing a figure,
+or when only `sim_summary.csv` is at hand. Each figure is drawn separately for the
+one-standard-error rule (`_1se.png`) and the minimum rule (`_min.png`).
 
 Metrics are recorded at three levels: global support (TPR, FDR, MCC, exact
 recovery), deviation support (TPR and FDR of the nonzero deviations), and
@@ -331,7 +339,7 @@ near-cancelled cells where a deviation almost cancels the global effect).
 ```bash
 DESIGN=bounded  NCORES=8 Rscript simulation/03_oracle_study.R 200        # assumptions 4.2, 4.4 hold
 DESIGN=bounded  NCORES=8 Rscript simulation/05_near_cancellation.R 100   # Theorem 4.2, condition (b)
-DESIGN=bounded  Rscript simulation/04_oracle_tables_figures.R            # Tables 4 (top panel), 5, 6; Figures 5-6 -> output/
+DESIGN=bounded  Rscript simulation/04_oracle_tables_figures.R            # Tables 4 (top panel), 5, 6; Figures 11-12 -> output/
 DESIGN=gaussian NCORES=8 Rscript simulation/03_oracle_study.R 200        # robustness: Gaussian covariates
 DESIGN=gaussian NCORES=8 Rscript simulation/05_near_cancellation.R 100
 DESIGN=gaussian Rscript simulation/04_oracle_tables_figures.R            # Table 4 (bottom panel) -> output/
@@ -406,7 +414,7 @@ you log out.
 ```bash
 Rscript application/01_prepare_data.R            # analysis data, p = 500 genes; Table 7 data
 Rscript application/02_fit_and_infer.R           # all fits, inference, validation (about 7 min)
-Rscript application/03_make_tables_figures.R     # Tables 9-13 and Figures 7-10 -> output/
+Rscript application/03_make_tables_figures.R     # Tables 9-13 and Figures 13-16 -> output/
 Rscript application/04_split_inference.R 50      # multi-split p-values, Table 14 (about 15 min)
 ```
 

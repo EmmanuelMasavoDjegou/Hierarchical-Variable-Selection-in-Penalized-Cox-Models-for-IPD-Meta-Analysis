@@ -14,7 +14,7 @@
 ##  Seeds   : replicate r at study size n uses set.seed(20270000 + 10 * n + r);
 ##            DESIGN=bounded (bounded covariates, fixed tau): 20290000 + 10 * n + r.
 ##  Runtime : about 15 h on one core for R = 200 (n_k = 1600 dominates); divide by NCORES.
-##  Next    : 04_oracle_tables_figures.R builds Tables 4-5 and Figures 5-6.
+##  Next    : 04_oracle_tables_figures.R builds Tables 4-6 and Figures 11-12.
 ################################################################################
 args <- commandArgs(trailingOnly = TRUE)
 here <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile)), error = function(e) {   # folder of this script
