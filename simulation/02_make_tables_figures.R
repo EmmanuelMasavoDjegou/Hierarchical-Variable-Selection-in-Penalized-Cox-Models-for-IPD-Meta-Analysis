@@ -88,7 +88,7 @@ hdr <- c("& \\multicolumn{5}{c}{Global support} & \\multicolumn{3}{c}{MSE $\\tim
 body <- c()
 for (rule in c("1se", "min")) {
   body <- c(body, sprintf("\\multicolumn{12}{@{}l}{\\emph{%s}} \\\\",
-                          if (rule == "1se") "One-standard-error rule" else "Minimum-deviance rule"),
+                          if (rule == "1se") "One-standard-error rule" else "Minimum rule"),
             apply(mk_rows("Base", rule), 1, paste, collapse = " & "))
   body <- paste0(body, ifelse(grepl("\\\\\\\\$", body) | grepl("^\\\\midrule$", body), "", " \\\\"))
   if (rule == "1se") body <- c(body, "\\midrule")
@@ -183,6 +183,6 @@ cat(sprintf("fits (CV runs) with >= 1 path point at the iteration limit: %d of %
             sum(fits$stalled)))
 cat("  by structure (fits with >= 1 iteration-limit point):\n")
 print(tapply(fits$iter_limit > 0, sub("^.*-", "", fits$method), function(v) sprintf("%d of %d", sum(v), length(v))))
-cat(sprintf("selected lambda at the smallest grid value: %.1f%% of fits (minimum rule), %.1f%% (1-SE rule)\n",
+cat(sprintf("selected lambda at the smallest grid value: %.1f%% of fits (minimum rule), %.1f%% (one-SE rule)\n",
             100 * mean(raw$boundary[raw$rule == "min"]), 100 * mean(raw$boundary[raw$rule == "1se"])))
 cat("details by scenario and method: simulation/results/sim_convergence_summary.csv\n")

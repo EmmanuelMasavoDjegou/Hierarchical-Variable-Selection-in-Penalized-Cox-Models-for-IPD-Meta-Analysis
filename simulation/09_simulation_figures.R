@@ -30,6 +30,9 @@ SCEN <- c("Base", "Independent covariates", "Strong correlation", "No heterogene
           "Strong heterogeneity", "Dense heterogeneity", "Heavy censoring", "Weak signals",
           "p = 200", "p = 500", "Ten studies", "Unequal study sizes", "Small studies, p > n_k")
 S$scen <- factor(S$scenario, levels = rev(SCEN))
+## y-axis labels with a proper subscript in "p > n_k"
+scen_lab <- function(x) lapply(x, function(v) if (v == "Small studies, p > n_k")
+  quote("Small studies, " * italic(p) > italic(n)[k]) else v)
 S$penalty <- factor(sub("-(H|S|P)$", "", S$method), levels = c("MCP", "SCAD", "LASSO", "ENet"),
                     labels = c("MCP", "SCAD", "Lasso", "Elastic net"))
 S$structure <- factor(sub("^.*-", "", S$method), levels = c("H", "S", "P"),
@@ -58,7 +61,7 @@ tile_layers <- function()
   list(geom_tile(colour = "white", linewidth = 0.6),
        geom_text(aes(label = lab, colour = g > 0.55), size = 2.5),
        scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = "grey15"), guide = "none"),
-       fill_scale, scale_x_discrete(position = "top"), th)
+       fill_scale, scale_x_discrete(position = "top"), scale_y_discrete(labels = scen_lab), th)
 
 ## one metric, all 12 methods
 value_table <- function(rule, v, lo, hi, higher, digits = 2, mult = 1, log = FALSE) {
@@ -120,8 +123,8 @@ for (rule in names(RULES)) {
     geom_errorbarh(aes(xmin = diff - 2 * se, xmax = diff + 2 * se), height = 0, colour = "grey55") +
     geom_point(aes(shape = sig), size = 1.9, colour = "#2a78d6", fill = "white", stroke = 0.8) +
     scale_shape_manual(values = c(16, 21), name = NULL, drop = FALSE) +
-    facet_grid(comparison ~ penalty) +
-    labs(x = sprintf("Difference in MCC, %s (positive favours the first model)", RULES[[rule]])) +
+    facet_grid(comparison ~ penalty) + scale_y_discrete(labels = scen_lab) +
+    labs(x = sprintf("Difference in MCC, %s (positive favors the first model)", RULES[[rule]])) +
     theme_bw(base_size = 9) +
     theme(panel.grid.minor = element_blank(), panel.grid.major = element_line(colour = "grey93"),
           strip.background.x = element_rect(fill = "grey95", colour = NA), strip.background.y = element_blank(),

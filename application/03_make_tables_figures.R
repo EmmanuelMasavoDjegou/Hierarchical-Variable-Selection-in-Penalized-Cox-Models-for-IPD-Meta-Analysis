@@ -64,7 +64,7 @@ dv <- function(x) ifelse(is.na(x), "--", as.character(x))
 writeLines(c("\\begin{tabular}{@{}lrrrrr@{}}", "\\toprule",
   "& \\multicolumn{2}{c}{Genes selected} & \\multicolumn{2}{c}{Deviations} & \\\\",
   "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}",
-  "Method & min & 1-SE & min & 1-SE & CV time (s) \\\\", "\\midrule",
+  "Method & min & one-SE & min & one-SE & CV time (s) \\\\", "\\midrule",
   sprintf("%s & %d & %d & %s & %s & %s \\\\", tm$label, tm$genes_min, tm$genes_1se, dv(tm$dev_min),
           dv(tm$dev_1se), formatC(tm$seconds, format = "f", digits = 1)),
   "\\bottomrule", "\\end{tabular}"), file.path(tab_dir, "tab_app_methods.tex"))
